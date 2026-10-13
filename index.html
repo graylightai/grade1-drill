@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#C94F43" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A1512" media="(prefers-color-scheme: dark)">
+<meta name="description" content="小學一年級的數學、注音、時鐘錢幣與國字練習，離線可用">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小一練功房">
+<link rel="apple-touch-icon" href="img/star.png">
+<link rel="icon" href="img/star.png">
+<title>小一練功房</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="fonts.css">
+<style>
+/* 視覺取材自作業簿：米色紙、淡藍格線、鉛筆灰、老師的紅筆、貼紙的金 */
+:root{
+  --paper:#FAF7F0; --surface:#FFFFFF; --sunken:#F0EBE0;
+  --ink:#2B2621; --muted:#7A7064; --line:#DED5C6;
+  --rule:#B9CFE4; --red:#C94F43; --red-soft:#F7E4E1;
+  --gold:#DFA52C; --green:#3B8F63; --green-soft:#E0F0E7;
+  --shadow:0 1px 2px rgba(43,38,33,.05), 0 10px 24px -14px rgba(43,38,33,.3);
+  --display:'Fredoka',var(--cjk);
+  --cjk:'PingFang TC','Noto Sans CJK TC','Noto Sans TC','Microsoft JhengHei',sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,'Segoe UI',var(--cjk);
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light dark;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#161310; --surface:#221D18; --sunken:#1C1814;
+    --ink:#EFE7DA; --muted:#A29584; --line:#39312A;
+    --rule:#3A4C5E; --red:#E8776A; --red-soft:#3A221F;
+    --gold:#EFC164; --green:#5FBE8A; --green-soft:#19301F;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 28px -16px rgba(0,0,0,.85);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#161310; --surface:#221D18; --sunken:#1C1814;
+  --ink:#EFE7DA; --muted:#A29584; --line:#39312A;
+  --rule:#3A4C5E; --red:#E8776A; --red-soft:#3A221F;
+  --gold:#EFC164; --green:#5FBE8A; --green-soft:#19301F;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 12px 28px -16px rgba(0,0,0,.85);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);
+  -webkit-text-size-adjust:100%;overscroll-behavior:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px;border-radius:8px}
+
+#app{min-height:100%;display:flex;flex-direction:column}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:10px;
+  padding:10px 16px;max-width:460px;width:100%;margin:0 auto;
+  background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line)}
+.bar .brand{font-family:var(--display);font-weight:600;font-size:17px;margin-right:auto}
+.iconbtn{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;font-size:19px;color:var(--muted)}
+.iconbtn:hover{background:var(--sunken);color:var(--ink)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:12px;
+  border:1px solid var(--line);background:var(--surface);white-space:nowrap;
+  font-variant-numeric:tabular-nums;font-family:var(--mono)}
+
+.page{flex:1;display:none;flex-direction:column;padding:0 16px;max-width:460px;width:100%;margin:0 auto}
+.page.on{display:flex}
+.pad{padding-block:18px 28px}
+h1{font-family:var(--display);font-weight:600;font-size:26px;line-height:1.3;margin:0 0 6px;text-wrap:balance}
+h2{font-family:var(--display);font-weight:600;font-size:12.5px;margin:24px 0 10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted)}
+p.lede{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.75;max-width:44ch}
+
+/* ---- 科目選單：做成作業簿的分頁 ---- */
+.subjects{display:grid;gap:11px}
+.subj{display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:16px;background:var(--surface);
+  border:1px solid var(--line);box-shadow:var(--shadow);text-align:left;width:100%;position:relative;
+  overflow:hidden;transition:transform .12s ease}
+.subj:active{transform:scale(.985)}
+.subj::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+.subj .ic{flex:none;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;
+  background:var(--sunken);font-family:var(--display);font-weight:600;font-size:21px;color:var(--c)}
+.subj .t{font-family:var(--display);font-weight:600;font-size:17px}
+.subj .d{font-size:12.5px;color:var(--muted);line-height:1.55;margin-top:2px}
+.subj .st{flex:none;text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.5}
+.subj .st b{display:block;font-size:17px;color:var(--ink);font-weight:600}
+
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.ghost{padding:13px;border-radius:14px;border:1px solid var(--line);font-size:14px;
+  display:flex;align-items:center;justify-content:center;gap:7px}
+.ghost:hover{background:var(--surface)}
+
+/* ---- 練習頁 ---- */
+#quiz{padding-block:10px 18px;gap:12px}
+/* 一題一格：未答是灰的，答對綠、答錯紅，一眼看得出這輪的狀況 */
+.pbar{height:6px;display:flex;gap:3px}
+.pbar i{flex:1;background:var(--line);border-radius:99px;transition:background .25s}
+.pbar i.ok{background:var(--green)}
+.pbar i.no{background:var(--red)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);
+  padding:20px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;
+  flex:1 1 auto;min-height:160px;justify-content:center;
+  /* 作業簿的格線 */
+  background-image:linear-gradient(var(--rule) 1px,transparent 1px);
+  background-size:100% 30px;background-position:0 12px;background-blend-mode:normal}
+.ask{font-size:17px;font-weight:500;text-align:center;line-height:1.6;text-wrap:balance}
+.big{font-family:var(--display);font-weight:600;font-size:46px;letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;text-align:center;line-height:1.1}
+.bopo{font-size:40px;letter-spacing:.1em;text-align:center;font-family:var(--cjk);line-height:1.25}
+.artimg{width:108px;height:108px;object-fit:contain;display:block}
+
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ch{min-height:76px;border-radius:16px;border:2px solid var(--line);background:var(--surface);
+  display:grid;place-items:center;padding:10px;font-family:var(--display);font-weight:600;font-size:28px;
+  font-variant-numeric:tabular-nums;transition:transform .12s ease,background .15s,border-color .15s}
+.ch .cjkbig{font-family:var(--cjk);font-size:34px;font-weight:600}
+.ch img{width:62px;height:62px;object-fit:contain}
+.ch:active{transform:scale(.97)}
+.ch.ok{background:var(--green-soft);border-color:var(--green);animation:pop .36s cubic-bezier(.3,1.5,.5,1)}
+.ch.no{background:var(--red-soft);border-color:var(--red);animation:shake .34s}
+.ch[disabled]{opacity:.45}
+.ch.ok[disabled],.ch.no[disabled]{opacity:1}
+@keyframes pop{0%{transform:scale(1)}42%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@media (prefers-reduced-motion:reduce){.ch.ok,.ch.no{animation:none}*{transition-duration:.01ms!important}}
+
+.hint{font-size:13.5px;color:var(--muted);line-height:1.7;text-align:center;padding:2px 4px;
+  background:var(--sunken);border-radius:12px;padding:10px 12px}
+.hint b{color:var(--ink);font-weight:600}
+
+/* ---- 診斷頁 ---- */
+.topic{padding:13px 0;border-bottom:1px solid var(--line)}
+.topic .hd{display:flex;align-items:baseline;gap:8px;margin-bottom:7px}
+.topic .nm{font-size:14px;font-weight:500;margin-right:auto}
+.topic .pc{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.meter{height:7px;border-radius:99px;background:var(--sunken);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:99px;background:var(--green)}
+.topic .note{font-size:12.5px;color:var(--red);line-height:1.6;margin-top:7px}
+.topic .note.good{color:var(--green)}
+.empty{color:var(--muted);font-size:13.5px;line-height:1.85;padding:22px 0}
+.totals{display:flex;gap:10px;margin-bottom:6px}
+.tot{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.tot .k{font-size:11px;color:var(--muted);letter-spacing:.05em}
+.tot .v{font-family:var(--display);font-size:23px;font-weight:600;font-variant-numeric:tabular-nums}
+.tot .v small{font-size:12px;font-weight:400;color:var(--muted)}
+
+/* ---- 設定 ---- */
+.set{padding:14px 0;border-bottom:1px solid var(--line)}
+.set .lab{font-size:14px;font-weight:500;margin-bottom:3px}
+.set .sub{font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{padding:9px 14px;border-radius:11px;border:1px solid var(--line);font-size:13.5px;background:var(--surface)}
+.seg button[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff;font-weight:500}
+details.note2{margin-top:24px;border-top:1px solid var(--line);padding-top:14px}
+details.note2 summary{font-size:13px;color:var(--muted);cursor:pointer;list-style:none}
+details.note2 summary::-webkit-details-marker{display:none}
+details.note2 summary::before{content:'▸ ';color:var(--red)}
+details.note2[open] summary::before{content:'▾ '}
+details.note2 .body{font-size:13px;line-height:1.85;color:var(--muted);margin-top:10px;max-width:44ch}
+details.note2 .body b{color:var(--ink);font-weight:500}
+details.note2 .body ul{margin:8px 0;padding-left:18px}
+
+/* ---- 覆蓋層 ---- */
+.sheet{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:24px;
+  background:color-mix(in srgb,var(--paper) 84%,transparent);backdrop-filter:blur(6px)}
+.sheet .box{background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);
+  padding:26px 22px;max-width:340px;width:100%;text-align:center}
+.sheet h3{font-family:var(--display);font-weight:600;font-size:22px;margin:0 0 6px}
+.sheet p{font-size:13.5px;color:var(--muted);line-height:1.75;margin:0}
+.stars{font-size:30px;letter-spacing:7px;margin:14px 0 2px;color:var(--gold)}
+.score{display:flex;gap:14px;justify-content:center;margin:16px 0 20px}
+.score .k{font-size:11px;color:var(--muted);letter-spacing:.05em}
+.score .v{font-family:var(--display);font-size:23px;font-weight:600;font-variant-numeric:tabular-nums}
+.primary{width:100%;padding:14px;border-radius:14px;background:var(--red);color:#fff;font-weight:600;font-size:15.5px}
+.link{margin-top:10px;font-size:13.5px;color:var(--muted);width:100%;padding:9px}
+.restnum{font-family:var(--display);font-size:58px;font-weight:600;color:var(--red);
+  font-variant-numeric:tabular-nums;margin:10px 0}
+</style>
+</head>
+
+<body>
+<div id="app">
+  <header class="bar">
+    <button class="iconbtn" id="back" hidden aria-label="回到首頁">←</button>
+    <div class="brand">小一練功房</div>
+    <span class="chip"><span id="clock">0</span>&nbsp;分</span>
+  </header>
+
+  <!-- ============ 首頁 ============ -->
+  <main class="page on pad" id="home">
+    <h1>今天練哪一科？</h1>
+    <p class="lede">一次 12 題。答錯的隔天一定會再出現，答得慢的也會抓回來——所以不用一次練很久。</p>
+    <div class="subjects" id="subjects"></div>
+    <div class="row">
+      <button class="ghost" data-go="report">📋 弱點診斷</button>
+      <button class="ghost" data-go="settings">⚙︎ 設定</button>
+    </div>
+
+    <details class="note2">
+      <summary>家長須知：這個 app 跟一般練習題哪裡不一樣</summary>
+      <div class="body">
+        <p><b>它不隨機出題。</b>一般的練習 app 隨機抽，結果八成時間在練小孩已經會的東西。這裡用的是間隔重複：</p>
+        <ul>
+          <li>答錯 → 掉回第一箱，<b>隔天一定再出</b></li>
+          <li>答對 → 升一箱，間隔拉長成 1、2、4、8 天</li>
+          <li><b>答對但太慢也算不熟</b>——還在扳手指就不是真的會，照樣抓回來</li>
+        </ul>
+        <p>「弱點診斷」頁會告訴你她<b>卡在哪一個數字</b>，不是只給一個分數。</p>
+        <p>近距離作業一樣要顧眼睛：手機拿在 30 公分左右，每 10 分鐘會跳出休息提醒，看遠 20 秒。</p>
+      </div>
+    </details>
+  </main>
+
+  <!-- ============ 練習 ============ -->
+  <main class="page" id="quiz">
+    <div class="pbar" id="pbar"></div>
+    <div class="card" id="card"></div>
+    <div class="choices" id="choices"></div>
+    <div id="feedback"></div>
+  </main>
+
+  <!-- ============ 診斷 ============ -->
+  <main class="page pad" id="report">
+    <h1>弱點診斷</h1>
+    <p class="lede">只存在這台裝置裡。紅字是建議優先處理的地方。</p>
+    <div class="totals">
+      <div class="tot"><div class="k">今天</div><div class="v" id="tToday">0<small> 分</small></div></div>
+      <div class="tot"><div class="k">已熟練</div><div class="v" id="tMastered">0</div></div>
+      <div class="tot"><div class="k">要加強</div><div class="v" id="tWeak">0</div></div>
+    </div>
+    <div id="topics"></div>
+  </main>
+
+  <!-- ============ 設定 ============ -->
+  <main class="page pad" id="settings">
+    <h1>設定</h1>
+    <p class="lede">改完回首頁就會套用，下次打開還在。</p>
+    <div class="set">
+      <div class="lab">一次幾題</div>
+      <div class="sub">小一的專注力大概 8～10 分鐘。寧可一天兩次短的，不要一次很長。</div>
+      <div class="seg" id="segLen"></div>
+    </div>
+    <div class="set">
+      <div class="lab">字級</div>
+      <div class="sub">以看得舒服為準。近距離作業要顧眼睛是靠距離和休息，不是靠把字縮小。</div>
+      <div class="seg" id="segSize"></div>
+    </div>
+    <div class="set">
+      <div class="lab">答錯時給提示</div>
+      <div class="sub">開啟的話，答錯會告訴她算法（例如進位加法會示範怎麼湊十）。</div>
+      <div class="seg" id="segHint"></div>
+    </div>
+    <div class="set">
+      <div class="lab">音效</div>
+      <div class="sub">即時合成，沒有音檔。在飛機上或需要安靜時關掉。</div>
+      <div class="seg" id="segSound"></div>
+    </div>
+    <div class="set" style="border-bottom:0">
+      <div class="lab">休息提醒</div>
+      <div class="sub">每累積這麼多分鐘，跳出 20 秒看遠提醒。</div>
+      <div class="seg" id="segRest"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+/* =======================================================================
+   小一練功房 — 數學／注音／時鐘錢幣／國字
+   核心是間隔重複：每個知識點一個 key，答錯掉回第一箱，答對升一箱。
+   反應時間納入判定：答對但太慢 = 還不熟，不升箱。
+   純靜態、零外連、離線可用。
+   ======================================================================= */
+const $ = s => document.querySelector(s);
+const el = (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; };
+const rnd = n => Math.floor(Math.random() * n);
+const pick = a => a[rnd(a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const uniq = a => [...new Set(a)];
+
+function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+const S = { len: 12, size: 1, hint: true, sound: true, rest: 10 };
+Object.assign(S, load('g1.set', {}));
+
+/* ---------- 間隔重複（Leitner） ----------
+   box 0..4，到期日用「天數」存。答錯回 0，答對升一箱。
+   間隔：0→明天、1→2 天、2→4 天、3→8 天、4→16 天。 */
+const GAPS = [1, 2, 4, 8, 16];
+const DAY = 864e5;
+const today = () => Math.floor(Date.now() / DAY);
+let SR = load('g1.sr', {});            // key -> {b, d, n, ok, bad, t:[最近 5 次毫秒]}
+const rec = k => SR[k] || (SR[k] = { b: 0, d: 0, n: 0, ok: 0, bad: 0, t: [] });
+const median = a => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
+
+/* 答對但超過這個時間，視為「會但不熟」，不升箱 */
+const SLOW_MS = 6000;
+
+function grade(key, right, ms) {
+  const r = rec(key);
+  r.n++;
+  r.t = [...r.t, ms].slice(-5);
+  if (right) {
+    r.ok++;
+    if (ms <= SLOW_MS) {
+      r.b = Math.min(4, r.b + 1);                     // 夠快才升箱，間隔才拉長
+      r.d = today() + GAPS[r.b];
+    } else {
+      r.d = today() + 1;                              // 會但很慢：不升箱，明天就回來
+    }
+  } else {
+    r.bad++;
+    r.b = 0;
+    r.d = today();                                    // 今天稍後、明天都還會出
+  }
+  save('g1.sr', SR);
+}
+
+/* =======================================================================
+   題庫：每個知識點是一個 key，配一個出題函式
+   ======================================================================= */
+
+/* ---------- 數學 ---------- */
+const MATH = [];
+// 湊十：一年級所有進位加法的基礎
+for (let a = 1; a <= 9; a++) MATH.push({
+  k: `m.t10.${a}`, g: '湊十',
+  make: () => ({
+    ask: '湊成 10',
+    big: `${a} ＋ ？ ＝ 10`,
+    choices: distract(10 - a, 1, 9).map(v => ({ t: v, ok: v === 10 - a })),
+    hint: `把 10 拆開看：10 可以分成 <b>${a}</b> 和 <b>${10 - a}</b>。`
+  })
+});
+// 10 以內加法
+for (let a = 1; a <= 9; a++) for (let b = a; a + b <= 10; b++) MATH.push({
+  k: `m.a.${a}+${b}`, g: '10 以內加法',
+  make: () => { const [x, y] = shuffle([a, b]); return {
+    big: `${x} ＋ ${y} ＝ ？`,
+    choices: distract(a + b, 1, 10).map(v => ({ t: v, ok: v === a + b })),
+    hint: `用手指也可以：先放 ${x} 根，再數上去 ${y} 根。`
+  }; }
+});
+// 進位加法（和 11～18）——小一最大的坎
+for (let a = 2; a <= 9; a++) for (let b = a; b <= 9; b++) if (a + b >= 11) MATH.push({
+  k: `m.c.${a}+${b}`, g: '進位加法',
+  make: () => { const [x, y] = shuffle([a, b]); return {
+    big: `${x} ＋ ${y} ＝ ？`,
+    choices: distract(a + b, 11, 18).map(v => ({ t: v, ok: v === a + b })),
+    hint: `湊十法：${x} 還差 <b>${10 - x}</b> 就滿 10，把 ${y} 拆成 ${10 - x} 和 ${y - (10 - x)}。<br>${x}＋${10 - x}＝10，10＋${y - (10 - x)}＝<b>${a + b}</b>。`
+  }; }
+});
+// 退位減法（被減數 11～18）
+for (let s = 11; s <= 18; s++) for (let b = 2; b <= 9; b++) if (s - b >= 2 && s - b <= 9) MATH.push({
+  k: `m.s.${s}-${b}`, g: '退位減法',
+  make: () => ({
+    big: `${s} － ${b} ＝ ？`,
+    choices: distract(s - b, 1, 9).map(v => ({ t: v, ok: v === s - b })),
+    hint: `破十法：先用 10 減 ${b} 得 <b>${10 - b}</b>，再加上個位的 ${s - 10}，答案是 <b>${s - b}</b>。`
+  })
+});
+// 比大小與數序
+MATH.push({ k: 'm.cmp', g: '比大小', make: () => {
+  const a = 10 + rnd(90); let b = 10 + rnd(90); while (b === a) b = 10 + rnd(90);
+  return { ask: '哪一個比較大？', big: `${a}　${b}`,
+    choices: shuffle([{ t: a, ok: a > b }, { t: b, ok: b > a }]),
+    hint: `先比十位：${Math.floor(a / 10)} 和 ${Math.floor(b / 10)}。十位一樣才比個位。` };
+} });
+MATH.push({ k: 'm.seq', g: '數的順序', make: () => {
+  const st = 1 + rnd(90), step = pick([1, 1, 2, 5, 10]);
+  const seq = [st, st + step, st + step * 2, st + step * 3];
+  const hole = 1 + rnd(2), ans = seq[hole];
+  return { ask: '空格要填什麼？',
+    big: seq.map((v, i) => i === hole ? '？' : v).join('　'),
+    choices: distract(ans, 1, 120).map(v => ({ t: v, ok: v === ans })),
+    hint: `每次加 <b>${step}</b>。` };
+} });
+
+/** 產生 4 個不重複選項，正解在內，干擾項落在 lo..hi */
+function distract(ans, lo, hi) {
+  const out = new Set([ans]);
+  const near = [ans - 1, ans + 1, ans - 2, ans + 2, ans - 10, ans + 10];
+  for (const v of shuffle(near)) { if (out.size >= 4) break; if (v >= lo && v <= hi) out.add(v); }
+  let guard = 0;
+  while (out.size < 4 && guard++ < 200) { const v = lo + rnd(hi - lo + 1); if (v >= lo) out.add(v); }
+  return shuffle([...out]);
+}
+
+/* ---------- 注音（全視覺，不需要任何聲音） ---------- */
+const WORDS = [
+  ['cat','貓','ㄇㄠ'],['dog','狗','ㄍㄡˇ'],['pig','豬','ㄓㄨ'],['cow','牛','ㄋㄧㄡˊ'],
+  ['horse','馬','ㄇㄚˇ'],['sheep','羊','ㄧㄤˊ'],['fish','魚','ㄩˊ'],['bird','鳥','ㄋㄧㄠˇ'],
+  ['chicken','雞','ㄐㄧ'],['duck','鴨','ㄧㄚ'],['rabbit','兔','ㄊㄨˋ'],['deer','鹿','ㄌㄨˋ'],
+  ['elephant','象','ㄒㄧㄤˋ'],['lion','獅','ㄕ'],['tiger','虎','ㄏㄨˇ'],['bear','熊','ㄒㄩㄥˊ'],
+  ['monkey','猴','ㄏㄡˊ'],['snake','蛇','ㄕㄜˊ'],['turtle','龜','ㄍㄨㄟ'],['frog','蛙','ㄨㄚ'],
+  ['bee','蜂','ㄈㄥ'],['butterfly','蝶','ㄉㄧㄝˊ'],['ant','蟻','ㄧˇ'],['shrimp','蝦','ㄒㄧㄚ'],
+  ['crab','蟹','ㄒㄧㄝˋ'],['whale','鯨','ㄐㄧㄥ'],['shark','鯊','ㄕㄚ'],['dragon','龍','ㄌㄨㄥˊ'],
+  ['star','星','ㄒㄧㄥ'],['blossom','花','ㄏㄨㄚ'],['pear','梨','ㄌㄧˊ'],['peach','桃','ㄊㄠˊ'],
+  ['orange','橘','ㄐㄩˊ'],['mushroom','菇','ㄍㄨ'],['heart','心','ㄒㄧㄣ'],['mouse','鼠','ㄕㄨˇ'],
+  ['wolf','狼','ㄌㄤˊ'],['fox','狐','ㄏㄨˊ'],['ghost','鬼','ㄍㄨㄟˇ'],['snowman','雪','ㄒㄩㄝˇ'],
+  ['cookie','餅','ㄅㄧㄥˇ'],['balloon','球','ㄑㄧㄡˊ'],['crocodile','鱷','ㄜˋ']
+];
+const TONES = ['', 'ˊ', 'ˇ', 'ˋ'];
+const baseOf = z => z.replace(/[ˊˇˋ˙]/g, '');
+const toneOf = z => { const m = z.match(/[ˊˇˋ]/); return m ? m[0] : ''; };
+
+/* 形近的注音符號——這一組同時也是精細視覺辨別的練習 */
+const SIMILAR = [['ㄨ','ㄩ'],['ㄛ','ㄜ'],['ㄓ','ㄗ'],['ㄔ','ㄘ'],['ㄕ','ㄙ'],['ㄋ','ㄣ'],
+  ['ㄅ','ㄣ'],['ㄉ','ㄌ'],['ㄤ','ㄥ'],['ㄢ','ㄤ'],['ㄇ','ㄈ'],['ㄑ','ㄒ'],['ㄖ','ㄏ'],
+  ['ㄞ','ㄟ'],['ㄠ','ㄡ'],['ㄆ','ㄅ'],['ㄈ','ㄐ'],['ㄥ','ㄣ']];
+
+const BOPO = [];
+// 拼讀選圖：看注音，從四張圖裡挑出來
+WORDS.forEach(([slug, ch, zy]) => BOPO.push({
+  k: `b.read.${slug}`, g: '注音拼讀',
+  make: () => {
+    const others = shuffle(WORDS.filter(w => w[0] !== slug)).slice(0, 3);
+    return { ask: '這是什麼？', bopo: zy,
+      choices: shuffle([[slug, ch], ...others.map(o => [o[0], o[1]])]
+        .map(([s, c]) => ({ img: s, ok: s === slug }))),
+      hint: `<b>${zy}</b> 拼起來是「<b>${ch}</b>」。` };
+  }
+}));
+// 看圖選注音：拼得對不對（含形近符號干擾）
+WORDS.forEach(([slug, ch, zy]) => BOPO.push({
+  k: `b.spell.${slug}`, g: '看圖拼注音',
+  make: () => {
+    const wrong = uniq([mutateBopo(zy), mutateBopo(zy), mutateBopo(zy), swapTone(zy)])
+      .filter(z => z !== zy).slice(0, 3);
+    while (wrong.length < 3) { const z = swapTone(zy); if (z !== zy && !wrong.includes(z)) wrong.push(z); }
+    return { ask: '「' + ch + '」的注音是哪一個？', img: slug,
+      choices: shuffle([zy, ...wrong].map(z => ({ cjk: z, ok: z === zy }))),
+      hint: `「${ch}」唸 <b>${zy}</b>。` };
+  }
+}));
+// 聲調：同一個拼音換四個調
+WORDS.forEach(([slug, ch, zy]) => BOPO.push({
+  k: `b.tone.${slug}`, g: '聲調',
+  make: () => ({ ask: '「' + ch + '」是第幾聲？', img: slug,
+    choices: TONES.map((t, i) => ({ cjk: baseOf(zy) + t, ok: t === toneOf(zy) })),
+    hint: `${['一','二','三','四'][TONES.indexOf(toneOf(zy))]}聲，寫作 <b>${zy}</b>。` })
+}));
+// 形近符號辨別
+SIMILAR.forEach(([a, b]) => BOPO.push({
+  k: `b.sim.${a}${b}`, g: '形近符號',
+  make: () => {
+    const t = pick([a, b]), partner = t === a ? b : a;   // 形近的那一個一定在選項裡
+    const others = shuffle(uniq(SIMILAR.flat()).filter(x => x !== t && x !== partner)).slice(0, 2);
+    return { ask: '哪一個跟上面一樣？', bopo: t,
+      choices: shuffle([t, partner, ...others]).map(z => ({ cjk: z, ok: z === t })),
+      hint: `<b>${a}</b> 和 <b>${b}</b> 長得像，要看清楚筆畫差在哪裡。` };
+  }
+}));
+function mutateBopo(zy) {
+  const base = baseOf(zy), t = toneOf(zy);
+  for (const [a, b] of shuffle(SIMILAR.slice())) {
+    if (base.includes(a)) return base.replace(a, b) + t;
+    if (base.includes(b)) return base.replace(b, a) + t;
+  }
+  return swapTone(zy);
+}
+const swapTone = zy => baseOf(zy) + pick(TONES.filter(t => t !== toneOf(zy)));
+
+/* ---------- 時鐘與錢幣 ---------- */
+function clockSVG(h, m, size = 128) {
+  const c = size / 2, r = c - 4;
+  let ticks = '';
+  for (let i = 0; i < 12; i++) {
+    const a = i * Math.PI / 6 - Math.PI / 2;
+    const r1 = r - (i % 3 ? 7 : 11), lw = i % 3 ? 1.8 : 3;
+    ticks += `<line x1="${(c + r1 * Math.cos(a)).toFixed(1)}" y1="${(c + r1 * Math.sin(a)).toFixed(1)}"
+      x2="${(c + (r - 3) * Math.cos(a)).toFixed(1)}" y2="${(c + (r - 3) * Math.sin(a)).toFixed(1)}"
+      stroke="currentColor" stroke-width="${lw}" stroke-linecap="round"/>`;
+    const rt = r - 22, ang = a;
+    ticks += `<text x="${(c + rt * Math.cos(ang)).toFixed(1)}" y="${(c + rt * Math.sin(ang) + 5).toFixed(1)}"
+      text-anchor="middle" font-size="13" font-family="IBM Plex Mono, monospace" fill="currentColor"
+      opacity=".65">${i === 0 ? 12 : i}</text>`;
+  }
+  const ha = ((h % 12) + m / 60) * Math.PI / 6 - Math.PI / 2;
+  const ma = m * Math.PI / 30 - Math.PI / 2;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="color:var(--ink)">
+    <circle cx="${c}" cy="${c}" r="${r}" fill="var(--surface)" stroke="currentColor" stroke-width="2.5"/>
+    ${ticks}
+    <line x1="${c}" y1="${c}" x2="${(c + r * .5 * Math.cos(ha)).toFixed(1)}" y2="${(c + r * .5 * Math.sin(ha)).toFixed(1)}"
+      stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+    <line x1="${c}" y1="${c}" x2="${(c + r * .74 * Math.cos(ma)).toFixed(1)}" y2="${(c + r * .74 * Math.sin(ma)).toFixed(1)}"
+      stroke="var(--red)" stroke-width="3.2" stroke-linecap="round"/>
+    <circle cx="${c}" cy="${c}" r="3.6" fill="currentColor"/></svg>`;
+}
+const hhmm = (h, m) => `${h}:${String(m).padStart(2, '0')}`;
+
+function coinSVG(v, size = 46) {
+  const bill = v === 100;
+  const c = size / 2;
+  return bill
+    ? `<svg width="${size * 1.5}" height="${size}" viewBox="0 0 ${size * 1.5} ${size}">
+        <rect x="1" y="${size * .18}" width="${size * 1.5 - 2}" height="${size * .64}" rx="4"
+          fill="var(--green-soft)" stroke="var(--green)" stroke-width="2"/>
+        <text x="${size * .75}" y="${c + 5}" text-anchor="middle" font-size="15" font-weight="600"
+          font-family="IBM Plex Mono, monospace" fill="var(--green)">100</text></svg>`
+    : `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle cx="${c}" cy="${c}" r="${c - 2}" fill="var(--sunken)" stroke="var(--muted)" stroke-width="2"/>
+        <text x="${c}" y="${c + 6}" text-anchor="middle" font-size="${v >= 10 ? 16 : 18}" font-weight="600"
+          font-family="IBM Plex Mono, monospace" fill="var(--ink)">${v}</text></svg>`;
+}
+
+/* 拆到「每個時刻 / 每個金額」各自一個知識點，間隔重複才有意義，
+   診斷也才看得出是哪幾點鐘、哪個找零會卡。 */
+const CLOCK = [];
+for (let h = 1; h <= 12; h++) CLOCK.push({
+  k: `c.hour.${h}`, g: '認整點',
+  make: () => ({ ask: '現在幾點？', svg: clockSVG(h, 0),
+    choices: shuffle(uniq([h, (h % 12) + 1, ((h + 10) % 12) + 1, ((h + 5) % 12) + 1]).slice(0, 4)
+      .map(v => ({ t: hhmm(v, 0), ok: v === h }))),
+    hint: `短針指著 <b>${h}</b>，長針指著 12，所以是 ${h} 點整。` })
+});
+for (let h = 1; h <= 12; h++) CLOCK.push({
+  k: `c.half.${h}`, g: '認半點',
+  make: () => ({ ask: '現在幾點？', svg: clockSVG(h, 30),
+    choices: shuffle([{ t: hhmm(h, 30), ok: true }, { t: hhmm(h, 0), ok: false },
+      { t: hhmm((h % 12) + 1, 30), ok: false }, { t: hhmm(h, 15), ok: false }]),
+    hint: `長針指著 6 就是半點。短針已經走過 <b>${h}</b> 一點點，所以是 ${h} 點 30 分，不是 ${(h % 12) + 1} 點。` })
+});
+for (let m = 5; m <= 55; m += 5) if (m !== 30) CLOCK.push({
+  k: `c.five.${m}`, g: '認到五分',
+  make: () => { const h = 1 + rnd(12);
+    return { ask: '現在幾點幾分？', svg: clockSVG(h, m),
+      choices: shuffle(uniq([m, (m + 5) % 60, (m + 55) % 60, (m + 25) % 60]).slice(0, 4)
+        .map(v => ({ t: hhmm(h, v), ok: v === m }))),
+      hint: `長針每走一大格是 5 分鐘。它停在第 <b>${m / 5}</b> 格，${m / 5}×5＝<b>${m}</b> 分。` }; }
+});
+[20, 35, 50, 70].forEach(max => CLOCK.push({
+  k: `$.count.${max}`, g: '數錢幣',
+  make: () => {
+    let coins, sum, guard = 0;
+    do {
+      coins = shuffle([...Array(rnd(Math.floor(max / 10)) + 1).fill(10),
+                       ...Array(rnd(2) + 1).fill(5), ...Array(rnd(4) + 1).fill(1)]);
+      sum = coins.reduce((a, b) => a + b, 0);
+    } while (sum > max && guard++ < 50);
+    const t10 = coins.filter(c => c === 10).length, t5 = coins.filter(c => c === 5).length,
+          t1 = coins.filter(c => c === 1).length;
+    return { ask: '一共多少錢？', row: coins.map(v => coinSVG(v)).join(''),
+      choices: distract(sum, 1, max + 10).map(v => ({ t: v + ' 元', ok: v === sum })),
+      hint: `先數 10 元的：${t10}×10＝${t10 * 10}；再數 5 元的：${t5}×5＝${t5 * 5}；加上 ${t1} 個 1 元。
+        合計 <b>${sum}</b> 元。` };
+  }
+}));
+[15, 20, 25, 30, 35, 40, 45, 50].forEach(price => CLOCK.push({
+  k: `$.pay.${price}`, g: '付錢找零',
+  make: () => ({ ask: `東西要 ${price} 元，用 50 元付，要找多少？`,
+    row: coinSVG(50) + coinSVG(50, 0),
+    big: `${price} 元`,
+    choices: distract(50 - price, 0, 50).map(v => ({ t: v + ' 元', ok: v === 50 - price })),
+    hint: `50 － ${price} ＝ <b>${50 - price}</b> 元。` })
+}));
+
+/* ---------- 國字：形近字辨別 ---------- */
+const HANZI_SIM = [['日','目'],['人','入'],['大','犬'],['土','士'],['木','禾'],['手','毛'],
+  ['千','干'],['天','夫'],['刀','力'],['白','百'],['王','玉'],['牛','午'],['田','由'],
+  ['自','白'],['石','右'],['元','兄'],['十','土'],['水','永'],['免','兔'],['未','末']];
+const HANZI = HANZI_SIM.map(([a, b]) => ({
+  k: `h.sim.${a}${b}`, g: '形近國字',
+  make: () => {
+    const t = pick([a, b]), partner = t === a ? b : a;   // 形近的那一個一定在選項裡
+    const others = shuffle(uniq(HANZI_SIM.flat()).filter(x => x !== t && x !== partner)).slice(0, 2);
+    return { ask: '哪一個跟上面一樣？', cjkBig: t,
+      choices: shuffle([t, partner, ...others]).map(z => ({ cjk: z, ok: z === t })),
+      hint: `<b>${a}</b> 和 <b>${b}</b> 只差一點點，要看清楚。` };
+  }
+}));
+
+/* ---------- 科目 ---------- */
+const SUBJECTS = [
+  { id: 'math',  name: '數學',     ic: '＋', c: '#C94F43', d: '湊十、20 以內加減、進位退位、比大小', items: MATH },
+  { id: 'bopo',  name: '注音',     ic: 'ㄅ', c: '#3B7FB5', d: '拼讀、聲調、形近符號辨別', items: BOPO },
+  { id: 'clock', name: '時鐘錢幣', ic: '🕐', c: '#3B8F63', d: '認時刻、數錢幣、找零', items: CLOCK },
+  { id: 'hanzi', name: '國字',     ic: '字', c: '#8A5BA8', d: '形近字辨別（筆順描字下一版加）', items: HANZI }
+];
+const ALL = {};
+SUBJECTS.forEach(s => s.items.forEach(it => { it.subj = s.id; ALL[it.k] = it; }));
+
+/* =======================================================================
+   音效（即時合成，無音檔）
+   ======================================================================= */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let AC = null;
+function actx() {
+  if (!S.sound) return null;
+  try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume(); return AC; } catch { return null; }
+}
+function tone(f, { at = 0, dur = .13, type = 'triangle', vol = .14, to = 0 } = {}) {
+  const c = actx(); if (!c) return;
+  const t = c.currentTime + at, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + .012);
+  g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .03);
+}
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+const sfx = {
+  good: n => tone(PENTA[Math.min((n | 0), PENTA.length - 1)] || PENTA[0], { dur: .13, vol: .13 }),
+  bad: () => tone(196, { dur: .18, vol: .09, type: 'sine', to: 155 }),
+  win: () => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, { at: i * .09, dur: .36, vol: .14 }))
+};
+
+/* =======================================================================
+   出題：到期的優先，不夠才補新的
+   ======================================================================= */
+function buildSession(subjId) {
+  const items = SUBJECTS.find(s => s.id === subjId).items;
+  const t = today();
+  const due = items.filter(i => SR[i.k] && SR[i.k].d <= t);
+  const fresh = items.filter(i => !SR[i.k]);
+  const rest = items.filter(i => SR[i.k] && SR[i.k].d > t);
+  // 到期的先排（箱子越低越前面），再補沒練過的，真的不夠才拿還沒到期的
+  due.sort((a, b) => SR[a.k].b - SR[b.k].b);
+  const out = [...due, ...shuffle(fresh), ...shuffle(rest)].slice(0, S.len);
+  return shuffle(out);
+}
+
+let session = null, tick = null;
+let elapsed = load('g1.time', { d: today(), s: 0 });
+if (elapsed.d !== today()) elapsed = { d: today(), s: 0 };
+let restMark = Math.floor(elapsed.s / 60 / S.rest);
+
+function start(subjId) {
+  const q = buildSession(subjId);
+  if (!q.length) return;
+  session = { subj: subjId, list: q, i: 0, ok: 0, bad: 0, extra: 0, t0: performance.now(), marks: [] };
+  show('quiz');
+  clearInterval(tick);
+  tick = setInterval(() => { elapsed.s++; save('g1.time', elapsed);
+    $('#clock').textContent = Math.floor(elapsed.s / 60); }, 1000);
+  render();
+}
+
+function drawBar() {
+  $('#pbar').replaceChildren(...session.list.map((_, i) => {
+    const b = el('i'); if (session.marks[i]) b.classList.add(session.marks[i]); return b;
+  }));
+}
+
+function render() {
+  const s = session;
+  drawBar();
+  if (s.i >= s.list.length) return finish();
+
+  const item = s.list[s.i];
+  const q = item.make();
+  const card = $('#card'); card.replaceChildren();
+  const add = (cls, html) => { const d = el('div', cls); d.innerHTML = html; card.append(d); return d; };
+
+  if (q.ask) add('ask', q.ask);
+  if (q.img) { const i = el('img', 'artimg'); i.src = `img/${q.img}.png`; i.alt = ''; card.append(i); }
+  if (q.svg) add('', q.svg);
+  if (q.row) add('', `<div style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;max-width:300px">${q.row}</div>`);
+  if (q.big) add('big', q.big);
+  if (q.bopo) add('bopo', q.bopo);
+  if (q.cjkBig) add('big', `<span style="font-family:var(--cjk)">${q.cjkBig}</span>`);
+
+  const ch = $('#choices'); ch.replaceChildren();
+  $('#feedback').replaceChildren();
+  const t0 = performance.now();
+  let answered = false;
+
+  q.choices.forEach(c => {
+    const b = el('button', 'ch');
+    if (c.img) { const i = el('img'); i.src = `img/${c.img}.png`; i.alt = ''; b.append(i); }
+    else if (c.cjk) b.innerHTML = `<span class="cjkbig">${c.cjk}</span>`;
+    else b.textContent = c.t;
+    b.onclick = () => {
+      if (answered) return;
+      answered = true;
+      const ms = performance.now() - t0;
+      grade(item.k, !!c.ok, ms);
+      [...ch.children].forEach(x => x.disabled = true);
+      if (c.ok) {
+        b.classList.add('ok'); s.ok++; s.marks[s.i] = 'ok'; drawBar();
+        sfx.good(s.marks.filter(m => m === 'ok').length);
+        setTimeout(next, 520);
+      } else {
+        // 答錯就停在原題：標出正解、給算法提示，按鈕按了才走
+        b.classList.add('no'); s.bad++; s.marks[s.i] = 'no';
+        // 答錯的這一輪稍後再出一次，當場補強（最多補 3 題，不然會沒完沒了）
+        if (s.extra < 3) { s.extra++; s.list.splice(Math.min(s.i + 3, s.list.length), 0, item); }
+        drawBar();
+        [...ch.children].forEach((x, i) => { if (q.choices[i].ok) x.classList.add('ok'); });
+        sfx.bad();
+        if (S.hint && q.hint) {
+          const h = el('div', 'hint'); h.innerHTML = q.hint; $('#feedback').append(h);
+        }
+        const go = el('button', 'primary'); go.textContent = '知道了，下一題';
+        go.style.marginTop = '10px'; go.onclick = next; $('#feedback').append(go);
+      }
+    };
+    ch.append(b);
+  });
+}
+
+function next() { session.i++; render(); }
+
+function finish() {
+  clearInterval(tick);
+  const s = session;
+  const sec = Math.round((performance.now() - s.t0) / 1000);
+  const acc = s.ok / Math.max(1, s.ok + s.bad);
+  const stars = acc >= .9 ? 3 : acc >= .7 ? 2 : 1;
+  sfx.win();
+  const mins = Math.floor(elapsed.s / 60);
+  const needRest = Math.floor(mins / S.rest) > restMark;
+  sheet(`<h3>做完了！</h3>
+    <div class="stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+    <div class="score">
+      <div><div class="k">答對</div><div class="v">${s.ok}</div></div>
+      <div><div class="k">答錯</div><div class="v">${s.bad}</div></div>
+      <div><div class="k">用時</div><div class="v">${sec}<small>秒</small></div></div>
+    </div>
+    <p>${s.bad ? `答錯的 ${s.bad} 題明天會再出現。` : '全對！這些題目會隔比較久才再出現。'}</p>`,
+    [['再來一輪', () => { close_(); start(s.subj); }],
+     ['回首頁', () => { close_(); show('home'); }, 'link']],
+    () => { if (needRest) { restMark = Math.floor(mins / S.rest); rest(); } });
+}
+
+function rest() {
+  let left = 20;
+  const box = sheet(`<h3>休息一下</h3><div class="restnum" id="rn">20</div>
+    <p>放下手機，看窗外或房間裡最遠的東西 20 秒。</p>`, []);
+  const n = box.querySelector('#rn');
+  const iv = setInterval(() => { n.textContent = --left; if (left <= 0) { clearInterval(iv); close_(); } }, 1000);
+}
+
+/* ---------- 對話框 ---------- */
+let sheetEl = null;
+function sheet(html, buttons, onClose) {
+  close_();
+  sheetEl = el('div', 'sheet');
+  const box = el('div', 'box'); box.innerHTML = html;
+  (buttons || []).forEach(([label, fn, kind]) => {
+    const b = el('button', kind === 'link' ? 'link' : 'primary');
+    b.textContent = label; b.onclick = fn; box.append(b);
+  });
+  sheetEl.append(box); sheetEl._cb = onClose;
+  document.body.append(sheetEl);
+  return box;
+}
+function close_() { if (!sheetEl) return; const cb = sheetEl._cb; sheetEl.remove(); sheetEl = null; cb?.(); }
+
+/* =======================================================================
+   介面
+   ======================================================================= */
+let view = 'home';
+function show(v) {
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === v));
+  $('#back').hidden = v === 'home';
+  view = v; window.scrollTo(0, 0);
+  if (v === 'home') buildHome();
+  if (v === 'report') buildReport();
+}
+
+function buildHome() {
+  const t = today();
+  const host = $('#subjects'); host.replaceChildren();
+  SUBJECTS.forEach(s => {
+    const due = s.items.filter(i => !SR[i.k] || SR[i.k].d <= t).length;
+    const mastered = s.items.filter(i => SR[i.k] && SR[i.k].b >= 4).length;
+    const b = el('button', 'subj');
+    b.style.setProperty('--c', s.c);
+    b.innerHTML = `<div class="ic">${s.ic}</div>
+      <div style="flex:1"><div class="t">${s.name}</div><div class="d">${s.d}</div></div>
+      <div class="st"><b>${due}</b>該練<br>${mastered}/${s.items.length} 熟</div>`;
+    b.onclick = () => start(s.id);
+    host.append(b);
+  });
+}
+
+const GROUPS = () => {
+  const m = {};
+  Object.values(ALL).forEach(it => {
+    const r = SR[it.k]; if (!r || !r.n) return;
+    const g = m[it.subj + '/' + it.g] || (m[it.subj + '/' + it.g] = { subj: it.subj, g: it.g, keys: [] });
+    g.keys.push(it.k);
+  });
+  return Object.values(m);
+};
+
+function buildReport() {
+  const t = today();
+  const seen = Object.keys(SR).filter(k => SR[k].n);
+  $('#tToday').innerHTML = Math.round(elapsed.s / 60) + '<small> 分</small>';
+  $('#tMastered').textContent = seen.filter(k => SR[k].b >= 4).length;
+  $('#tWeak').textContent = seen.filter(k => SR[k].b <= 1 && SR[k].n >= 2).length;
+
+  const host = $('#topics'); host.replaceChildren();
+  const groups = GROUPS();
+  if (!groups.length) {
+    host.innerHTML = `<p class="empty">還沒有資料。練過幾輪之後，這裡會告訴你她卡在哪一個數字、哪一組符號，
+      而不是只給一個分數。</p>`;
+    return;
+  }
+  const subjName = id => SUBJECTS.find(s => s.id === id).name;
+  groups.sort((a, b) => a.subj.localeCompare(b.subj));
+  groups.forEach(g => {
+    const rs = g.keys.map(k => SR[k]);
+    const prog = rs.reduce((a, r) => a + r.b, 0) / (rs.length * 4);
+    const times = rs.flatMap(r => r.t);
+    const med = median(times);
+    // 找出明顯比同組慢、或還在第 0/1 箱的細項
+    const weak = g.keys.filter(k => SR[k].b <= 1 && SR[k].n >= 2);
+    const slow = g.keys.filter(k => SR[k].t.length >= 2 && median(SR[k].t) > Math.max(med * 1.8, SLOW_MS));
+    const d = el('div', 'topic');
+    let note = '';
+    if (weak.length) note += `<div class="note">還不熟：<b>${weak.slice(0, 6).map(label).join('、')}</b>${weak.length > 6 ? ` 等 ${weak.length} 項` : ''}</div>`;
+    if (slow.length) note += `<div class="note">會但很慢（可能還在用數的）：<b>${slow.slice(0, 5).map(label).join('、')}</b></div>`;
+    if (!note && prog > .8) note = `<div class="note good">這一組已經很穩了</div>`;
+    d.innerHTML = `<div class="hd"><span class="nm">${subjName(g.subj)}・${g.g}</span>
+        <span class="pc">${Math.round(prog * 100)}%　${(med / 1000).toFixed(1)}s</span></div>
+      <div class="meter"><i style="width:${Math.round(prog * 100)}%"></i></div>${note}`;
+    host.append(d);
+  });
+}
+/** 把 key 變成人看得懂的標籤 */
+function label(k) {
+  const p = k.split('.');
+  if (p[0] === 'm') return p[2] || p[1];
+  if (p[0] === 'b') { const w = WORDS.find(w => w[0] === p[2]); return w ? w[1] : p[2]; }
+  if (p[0] === 'h') return p[2];
+  if (p[0] === 'c') return p[1] === 'five' ? p[2] + ' 分' : p[2] + ' 點';
+  if (p[0] === '$') return p[1] === 'pay' ? '找 ' + (50 - +p[2]) + ' 元' : '≤' + p[2] + ' 元';
+  return p[1];
+}
+
+/* ---------- 設定 ---------- */
+function seg(host, opts, get, set) {
+  const h = $(host); h.replaceChildren();
+  opts.forEach(([v, lab]) => {
+    const b = el('button'); b.textContent = lab;
+    b.setAttribute('aria-pressed', String(get() === v));
+    b.onclick = () => { set(v); save('g1.set', S); syncSet(); };
+    h.append(b);
+  });
+}
+function syncSet() {
+  seg('#segLen', [[8, '8 題'], [12, '12 題'], [16, '16 題'], [20, '20 題']], () => S.len, v => S.len = v);
+  seg('#segSize', [[0, '標準'], [1, '大'], [2, '特大']], () => S.size, v => S.size = v);
+  seg('#segHint', [[true, '開'], [false, '關']], () => S.hint, v => S.hint = v);
+  seg('#segSound', [[true, '開'], [false, '靜音']], () => S.sound, v => { S.sound = v; if (v) sfx.good(2); });
+  seg('#segRest', [[5, '5 分'], [10, '10 分'], [15, '15 分'], [0, '不提醒']], () => S.rest, v => S.rest = v || 9999);
+  document.documentElement.style.fontSize = [15, 16.5, 18.5][S.size] + 'px';
+}
+
+$('#back').onclick = () => { clearInterval(tick); close_(); show('home'); };
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+
+/* ---------- 啟動 ---------- */
+$('#clock').textContent = Math.floor(elapsed.s / 60);
+syncSet();
+show('home');
+
+/* 離線：第一次連網開啟時把整個 app 抓進快取 */
+const secure = location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname);
+if ('serviceWorker' in navigator && secure) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

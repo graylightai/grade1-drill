@@ -1,0 +1,15 @@
+{
+  "name": "小一練功房",
+  "short_name": "小一練功房",
+  "description": "小學一年級的數學、注音、時鐘錢幣與國字練習，離線可用",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF7F0",
+  "theme_color": "#C94F43",
+  "lang": "zh-Hant-TW",
+  "icons": [
+    { "src": "img/star.png", "sizes": "128x128", "type": "image/png", "purpose": "any" }
+  ]
+}
