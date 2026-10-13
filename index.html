@@ -112,19 +112,23 @@ p.lede{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.75;max-wi
 .big{font-family:var(--display);font-weight:600;font-size:46px;letter-spacing:.04em;
   font-variant-numeric:tabular-nums;text-align:center;line-height:1.1}
 /* 直式注音：符號由上往下排，二三四聲標在最後一個符號右邊，輕聲的點標在最上面 */
-.zy{display:inline-flex;gap:.6em;align-items:flex-start;font-family:var(--cjk);justify-content:center}
+.zy{display:inline-flex;gap:.46em;align-items:flex-start;font-family:var(--cjk);justify-content:center}
 .zy .col{display:flex;flex-direction:column;align-items:center;gap:.14em}
 .zy .han{font-size:.6em;font-weight:600;line-height:1;color:var(--muted)}
 .syl{position:relative;display:flex;flex-direction:column;align-items:center;
-  line-height:1.02;padding-right:.52em;padding-top:.44em}
+  line-height:1.02;padding-right:.64em;padding-top:.66em}
 .syl b{font-weight:400;display:block}
-.syl .tn{position:absolute;right:0;bottom:.02em;font-size:.56em;line-height:1;font-style:normal}
-.syl .tn.up{right:auto;left:50%;transform:translateX(-50%);top:0;bottom:auto}
+/* 聲調符號放大到音節的 0.82 倍：筆畫細，太小小孩根本分不出ˊ和ˋ */
+.syl .tn{position:absolute;right:0;bottom:.02em;font-size:.82em;line-height:1;font-style:normal}
+/* 輕聲的點不必跟著放大：它沒有形近的對手，要分辨的是ˊ、ˇ、ˋ三個 */
+.syl .tn.up{right:auto;left:50%;transform:translateX(-50%);top:0;bottom:auto;font-size:.6em}
 .card .zy{font-size:40px}
 .card .sub{margin-top:-2px}
 .card .sub .zy{font-size:22px}
 .card .en{font-family:var(--display);font-size:44px;font-weight:600;letter-spacing:.01em}
 .ch .zy{font-size:25px}
+.ch .zy.n3{font-size:19px}
+.ch .zy.n4{font-size:16px}
 .ch .en{font-family:var(--display);font-size:24px;letter-spacing:.01em;word-break:break-all;line-height:1.15}
 .ch .en.big{font-size:40px}
 .ch .tag{display:block;font-size:11px;color:var(--muted);margin-top:4px;
@@ -495,7 +499,7 @@ function zhuyin(sylArr, han) {
   const cols = sylArr.map((z, i) => han
     ? `<span class="col"><span class="han">${han[i]}</span>${syl(z)}</span>`
     : `<span class="col">${syl(z)}</span>`);
-  return `<span class="zy">${cols.join('')}</span>`;
+  return `<span class="zy n${sylArr.length}">${cols.join('')}</span>`;
 }
 
 /* 形近的注音符號——這一組同時也是精細視覺辨別的練習 */
