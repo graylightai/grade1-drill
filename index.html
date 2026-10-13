@@ -111,7 +111,36 @@ p.lede{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.75;max-wi
 .ask{font-size:17px;font-weight:500;text-align:center;line-height:1.6;text-wrap:balance}
 .big{font-family:var(--display);font-weight:600;font-size:46px;letter-spacing:.04em;
   font-variant-numeric:tabular-nums;text-align:center;line-height:1.1}
-.bopo{font-size:40px;letter-spacing:.1em;text-align:center;font-family:var(--cjk);line-height:1.25}
+/* 直式注音：符號由上往下排，二三四聲標在最後一個符號右邊，輕聲的點標在最上面 */
+.zy{display:inline-flex;gap:.6em;align-items:flex-start;font-family:var(--cjk);justify-content:center}
+.zy .col{display:flex;flex-direction:column;align-items:center;gap:.14em}
+.zy .han{font-size:.6em;font-weight:600;line-height:1;color:var(--muted)}
+.syl{position:relative;display:flex;flex-direction:column;align-items:center;
+  line-height:1.02;padding-right:.52em;padding-top:.44em}
+.syl b{font-weight:400;display:block}
+.syl .tn{position:absolute;right:0;bottom:.02em;font-size:.56em;line-height:1;font-style:normal}
+.syl .tn.up{right:auto;left:50%;transform:translateX(-50%);top:0;bottom:auto}
+.card .zy{font-size:40px}
+.card .sub{margin-top:-2px}
+.card .sub .zy{font-size:22px}
+.card .en{font-family:var(--display);font-size:44px;font-weight:600;letter-spacing:.01em}
+.ch .zy{font-size:25px}
+.ch .en{font-family:var(--display);font-size:24px;letter-spacing:.01em;word-break:break-all;line-height:1.15}
+.ch .en.big{font-size:40px}
+.ch .tag{display:block;font-size:11px;color:var(--muted);margin-top:4px;
+  font-family:var(--body);font-weight:400}
+/* 直式注音：一個字一欄，符號上下排，聲調掛在右側；輕聲的點在上方 */
+.zrow{display:flex;gap:30px;justify-content:center;align-items:flex-start}
+.zcol{position:relative;display:flex;flex-direction:column;align-items:center;
+  font-family:var(--cjk);font-size:32px;line-height:1.04;padding:0 .4em}
+.zcol i{font-style:normal}
+.zcol u{position:absolute;right:-.02em;bottom:.04em;text-decoration:none;font-size:.78em;line-height:1}
+.zcol u.lt{right:auto;left:50%;transform:translateX(-50%);bottom:auto;top:-.66em}
+.wordline{text-align:center;font-family:var(--cjk);font-size:31px;font-weight:600;letter-spacing:.08em}
+.enline{text-align:center;font-family:var(--display);font-size:19px;font-weight:600;
+  letter-spacing:.09em;color:var(--muted);margin-top:1px}
+.ch .zrow{gap:14px}
+.ch .zcol{font-size:25px;padding:0 .34em}
 .artimg{width:108px;height:108px;object-fit:contain;display:block}
 
 .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -393,80 +422,214 @@ function distract(ans, lo, hi) {
 }
 
 /* ---------- 注音（全視覺，不需要任何聲音） ---------- */
+/* [圖檔名／英文單字, 國語詞, 每個字的注音]
+   用「詞」而不是單字——「鯊」不是詞，「鯊魚」才是。本來就能單獨成詞的（魚、花、心）保持一個字。 */
+/* ---------- 詞庫：一個詞 + 逐字注音 + 英文 ---------- */
 const WORDS = [
-  ['cat','貓','ㄇㄠ'],['dog','狗','ㄍㄡˇ'],['pig','豬','ㄓㄨ'],['cow','牛','ㄋㄧㄡˊ'],
-  ['horse','馬','ㄇㄚˇ'],['sheep','羊','ㄧㄤˊ'],['fish','魚','ㄩˊ'],['bird','鳥','ㄋㄧㄠˇ'],
-  ['chicken','雞','ㄐㄧ'],['duck','鴨','ㄧㄚ'],['rabbit','兔','ㄊㄨˋ'],['deer','鹿','ㄌㄨˋ'],
-  ['elephant','象','ㄒㄧㄤˋ'],['lion','獅','ㄕ'],['tiger','虎','ㄏㄨˇ'],['bear','熊','ㄒㄩㄥˊ'],
-  ['monkey','猴','ㄏㄡˊ'],['snake','蛇','ㄕㄜˊ'],['turtle','龜','ㄍㄨㄟ'],['frog','蛙','ㄨㄚ'],
-  ['bee','蜂','ㄈㄥ'],['butterfly','蝶','ㄉㄧㄝˊ'],['ant','蟻','ㄧˇ'],['shrimp','蝦','ㄒㄧㄚ'],
-  ['crab','蟹','ㄒㄧㄝˋ'],['whale','鯨','ㄐㄧㄥ'],['shark','鯊','ㄕㄚ'],['dragon','龍','ㄌㄨㄥˊ'],
-  ['star','星','ㄒㄧㄥ'],['blossom','花','ㄏㄨㄚ'],['pear','梨','ㄌㄧˊ'],['peach','桃','ㄊㄠˊ'],
-  ['orange','橘','ㄐㄩˊ'],['mushroom','菇','ㄍㄨ'],['heart','心','ㄒㄧㄣ'],['mouse','鼠','ㄕㄨˇ'],
-  ['wolf','狼','ㄌㄤˊ'],['fox','狐','ㄏㄨˊ'],['ghost','鬼','ㄍㄨㄟˇ'],['snowman','雪','ㄒㄩㄝˇ'],
-  ['cookie','餅','ㄅㄧㄥˇ'],['balloon','球','ㄑㄧㄡˊ'],['crocodile','鱷','ㄜˋ']
+  ['cat','貓咪',['ㄇㄠ','ㄇㄧ'],'cat'],              ['dog','小狗',['ㄒㄧㄠˇ','ㄍㄡˇ'],'dog'],
+  ['pig','小豬',['ㄒㄧㄠˇ','ㄓㄨ'],'pig'],           ['cow','乳牛',['ㄖㄨˇ','ㄋㄧㄡˊ'],'cow'],
+  ['horse','小馬',['ㄒㄧㄠˇ','ㄇㄚˇ'],'horse'],      ['sheep','綿羊',['ㄇㄧㄢˊ','ㄧㄤˊ'],'sheep'],
+  ['goat','山羊',['ㄕㄢ','ㄧㄤˊ'],'goat'],           ['duck','鴨子',['ㄧㄚ','ㄗ˙'],'duck'],
+  ['chicken','母雞',['ㄇㄨˇ','ㄐㄧ'],'hen'],         ['rooster','公雞',['ㄍㄨㄥ','ㄐㄧ'],'rooster'],
+  ['chick','小雞',['ㄒㄧㄠˇ','ㄐㄧ'],'chick'],       ['bird','小鳥',['ㄒㄧㄠˇ','ㄋㄧㄠˇ'],'bird'],
+  ['owl','貓頭鷹',['ㄇㄠ','ㄊㄡˊ','ㄧㄥ'],'owl'],    ['penguin','企鵝',['ㄑㄧˋ','ㄜˊ'],'penguin'],
+  ['swan','天鵝',['ㄊㄧㄢ','ㄜˊ'],'swan'],           ['peacock','孔雀',['ㄎㄨㄥˇ','ㄑㄩㄝˋ'],'peacock'],
+  ['parrot','鸚鵡',['ㄧㄥ','ㄨˇ'],'parrot'],         ['turkey','火雞',['ㄏㄨㄛˇ','ㄐㄧ'],'turkey'],
+  ['rabbit','兔子',['ㄊㄨˋ','ㄗ˙'],'rabbit'],       ['mouse','老鼠',['ㄌㄠˇ','ㄕㄨˇ'],'mouse'],
+  ['squirrel','松鼠',['ㄙㄨㄥ','ㄕㄨˇ'],'squirrel'], ['hedgehog','刺蝟',['ㄘˋ','ㄨㄟˋ'],'hedgehog'],
+  ['fox','狐狸',['ㄏㄨˊ','ㄌㄧˊ'],'fox'],            ['wolf','野狼',['ㄧㄝˇ','ㄌㄤˊ'],'wolf'],
+  ['bear','小熊',['ㄒㄧㄠˇ','ㄒㄩㄥˊ'],'bear'],      ['panda','貓熊',['ㄇㄠ','ㄒㄩㄥˊ'],'panda'],
+  ['koala','無尾熊',['ㄨˊ','ㄨㄟˇ','ㄒㄩㄥˊ'],'koala'], ['raccoon','浣熊',['ㄏㄨㄢˋ','ㄒㄩㄥˊ'],'raccoon'],
+  ['lion','獅子',['ㄕ','ㄗ˙'],'lion'],              ['tiger','老虎',['ㄌㄠˇ','ㄏㄨˇ'],'tiger'],
+  ['monkey','猴子',['ㄏㄡˊ','ㄗ˙'],'monkey'],       ['sloth','樹懶',['ㄕㄨˋ','ㄌㄢˇ'],'sloth'],
+  ['elephant','大象',['ㄉㄚˋ','ㄒㄧㄤˋ'],'elephant'],['giraffe','長頸鹿',['ㄔㄤˊ','ㄐㄧㄥˇ','ㄌㄨˋ'],'giraffe'],
+  ['zebra','斑馬',['ㄅㄢ','ㄇㄚˇ'],'zebra'],         ['hippo','河馬',['ㄏㄜˊ','ㄇㄚˇ'],'hippo'],
+  ['rhino','犀牛',['ㄒㄧ','ㄋㄧㄡˊ'],'rhino'],       ['camel','駱駝',['ㄌㄨㄛˋ','ㄊㄨㄛˊ'],'camel'],
+  ['llama','羊駝',['ㄧㄤˊ','ㄊㄨㄛˊ'],'llama'],      ['deer','小鹿',['ㄒㄧㄠˇ','ㄌㄨˋ'],'deer'],
+  ['kangaroo','袋鼠',['ㄉㄞˋ','ㄕㄨˇ'],'kangaroo'],  ['otter','水獺',['ㄕㄨㄟˇ','ㄊㄚˇ'],'otter'],
+  ['batx','蝙蝠',['ㄅㄧㄢ','ㄈㄨˊ'],'bat'],          ['boar','山豬',['ㄕㄢ','ㄓㄨ'],'boar'],
+  ['frog','青蛙',['ㄑㄧㄥ','ㄨㄚ'],'frog'],          ['turtle','烏龜',['ㄨ','ㄍㄨㄟ'],'turtle'],
+  ['snake','小蛇',['ㄒㄧㄠˇ','ㄕㄜˊ'],'snake'],      ['crocodile','鱷魚',['ㄜˋ','ㄩˊ'],'crocodile'],
+  ['lizard','蜥蜴',['ㄒㄧ','ㄧˋ'],'lizard'],         ['dino','恐龍',['ㄎㄨㄥˇ','ㄌㄨㄥˊ'],'dinosaur'],
+  ['shark','鯊魚',['ㄕㄚ','ㄩˊ'],'shark'],           ['whale','鯨魚',['ㄐㄧㄥ','ㄩˊ'],'whale'],
+  ['dolphin','海豚',['ㄏㄞˇ','ㄊㄨㄣˊ'],'dolphin'],  ['seal','海豹',['ㄏㄞˇ','ㄅㄠˋ'],'seal'],
+  ['octopus','章魚',['ㄓㄤ','ㄩˊ'],'octopus'],       ['squid','烏賊',['ㄨ','ㄗㄟˊ'],'squid'],
+  ['crab','螃蟹',['ㄆㄤˊ','ㄒㄧㄝˋ'],'crab'],        ['shrimp','蝦子',['ㄒㄧㄚ','ㄗ˙'],'shrimp'],
+  ['lobster','龍蝦',['ㄌㄨㄥˊ','ㄒㄧㄚ'],'lobster'],  ['blowfish','河豚',['ㄏㄜˊ','ㄊㄨㄣˊ'],'blowfish'],
+  ['bee','蜜蜂',['ㄇㄧˋ','ㄈㄥ'],'bee'],             ['butterfly','蝴蝶',['ㄏㄨˊ','ㄉㄧㄝˊ'],'butterfly'],
+  ['ladybug','瓢蟲',['ㄆㄧㄠˊ','ㄔㄨㄥˊ'],'ladybug'],['ant','螞蟻',['ㄇㄚˇ','ㄧˇ'],'ant'],
+  ['snail','蝸牛',['ㄍㄨㄚ','ㄋㄧㄡˊ'],'snail'],      ['beetle','甲蟲',['ㄐㄧㄚˇ','ㄔㄨㄥˊ'],'beetle'],
+  ['cricket','蟋蟀',['ㄒㄧ','ㄕㄨㄞˋ'],'cricket'],   ['worm','蚯蚓',['ㄑㄧㄡ','ㄧㄣˇ'],'worm'],
+  ['apple','蘋果',['ㄆㄧㄥˊ','ㄍㄨㄛˇ'],'apple'],    ['banana','香蕉',['ㄒㄧㄤ','ㄐㄧㄠ'],'banana'],
+  ['watermelon','西瓜',['ㄒㄧ','ㄍㄨㄚ'],'watermelon'],['strawberry','草莓',['ㄘㄠˇ','ㄇㄟˊ'],'strawberry'],
+  ['grapes','葡萄',['ㄆㄨˊ','ㄊㄠˊ'],'grapes'],      ['orange','橘子',['ㄐㄩˊ','ㄗ˙'],'orange'],
+  ['lemon','檸檬',['ㄋㄧㄥˊ','ㄇㄥˊ'],'lemon'],      ['peach','桃子',['ㄊㄠˊ','ㄗ˙'],'peach'],
+  ['pear','梨子',['ㄌㄧˊ','ㄗ˙'],'pear'],            ['pineapple','鳳梨',['ㄈㄥˋ','ㄌㄧˊ'],'pineapple'],
+  ['tomato','番茄',['ㄈㄢ','ㄑㄧㄝˊ'],'tomato'],      ['mango','芒果',['ㄇㄤˊ','ㄍㄨㄛˇ'],'mango'],
+  ['cherries','櫻桃',['ㄧㄥ','ㄊㄠˊ'],'cherry'],     ['coconut','椰子',['ㄧㄝˊ','ㄗ˙'],'coconut'],
+  ['pumpkin','南瓜',['ㄋㄢˊ','ㄍㄨㄚ'],'pumpkin'],    ['mushroom','蘑菇',['ㄇㄛˊ','ㄍㄨ'],'mushroom'],
+  ['blossom','櫻花',['ㄧㄥ','ㄏㄨㄚ'],'flower'],      ['rainbow','彩虹',['ㄘㄞˇ','ㄏㄨㄥˊ'],'rainbow'],
+  ['star','星星',['ㄒㄧㄥ','ㄒㄧㄥ'],'star'],         ['heart','愛心',['ㄞˋ','ㄒㄧㄣ'],'heart'],
+  ['balloon','氣球',['ㄑㄧˋ','ㄑㄧㄡˊ'],'balloon'],  ['cookie','餅乾',['ㄅㄧㄥˇ','ㄍㄢ'],'cookie'],
+  ['cupcake','蛋糕',['ㄉㄢˋ','ㄍㄠ'],'cake'],        ['snowman','雪人',['ㄒㄩㄝˇ','ㄖㄣˊ'],'snowman'],
+  ['robot','機器人',['ㄐㄧ','ㄑㄧˋ','ㄖㄣˊ'],'robot'],['ghost','幽靈',['ㄧㄡ','ㄌㄧㄥˊ'],'ghost']
 ];
-const TONES = ['', 'ˊ', 'ˇ', 'ˋ'];
+
+/* ---------- 直式注音 ----------
+   照教育部的標法：符號由上往下排，二三四聲標在最後一個符號的右邊，
+   輕聲（˙）標在第一個符號的上方，一聲不標。 */
+const TONES = ['', 'ˊ', 'ˇ', 'ˋ', '˙'];
 const baseOf = z => z.replace(/[ˊˇˋ˙]/g, '');
-const toneOf = z => { const m = z.match(/[ˊˇˋ]/); return m ? m[0] : ''; };
+const toneOf = z => (z.match(/[ˊˇˋ˙]/) || [''])[0];
+const toneNo = z => { const t = toneOf(z); return t === '' ? 1 : t === '˙' ? 5 : ' ˊˇˋ'.indexOf(t); };
+
+/** 一個音節 → 直式 HTML */
+function syl(zy) {
+  const t = toneOf(zy), syms = baseOf(zy).split('');
+  const mark = t === '' ? '' :
+    t === '˙' ? `<i class="tn up">˙</i>` : `<i class="tn">${t}</i>`;
+  return `<span class="syl">${syms.map(s => `<b>${s}</b>`).join('')}${mark}</span>`;
+}
+/** 一個詞（含多個音節）→ 直式注音 HTML；withHan 會把國字排在注音右邊 */
+function zhuyin(sylArr, han) {
+  const cols = sylArr.map((z, i) => han
+    ? `<span class="col"><span class="han">${han[i]}</span>${syl(z)}</span>`
+    : `<span class="col">${syl(z)}</span>`);
+  return `<span class="zy">${cols.join('')}</span>`;
+}
 
 /* 形近的注音符號——這一組同時也是精細視覺辨別的練習 */
 const SIMILAR = [['ㄨ','ㄩ'],['ㄛ','ㄜ'],['ㄓ','ㄗ'],['ㄔ','ㄘ'],['ㄕ','ㄙ'],['ㄋ','ㄣ'],
   ['ㄅ','ㄣ'],['ㄉ','ㄌ'],['ㄤ','ㄥ'],['ㄢ','ㄤ'],['ㄇ','ㄈ'],['ㄑ','ㄒ'],['ㄖ','ㄏ'],
   ['ㄞ','ㄟ'],['ㄠ','ㄡ'],['ㄆ','ㄅ'],['ㄈ','ㄐ'],['ㄥ','ㄣ']];
+const ALLSYM = uniq(SIMILAR.flat());
+
+/** 換掉詞裡某一個音節的一個形近符號，產生干擾選項 */
+function mutateWord(arr) {
+  const out = arr.slice();
+  for (let g = 0; g < 40; g++) {
+    const i = rnd(out.length), z = out[i], b = baseOf(z), t = toneOf(z);
+    const pairs = shuffle(SIMILAR.filter(([x, y]) => b.includes(x) || b.includes(y)));
+    if (!pairs.length) continue;
+    const [x, y] = pairs[0];
+    out[i] = (b.includes(x) ? b.replace(x, y) : b.replace(y, x)) + t;
+    if (out.join('') !== arr.join('')) return out;
+  }
+  // 找不到形近符號可換就改聲調
+  const i = rnd(out.length);
+  out[i] = baseOf(out[i]) + pick(TONES.filter(t => t !== toneOf(out[i])));
+  return out;
+}
 
 const BOPO = [];
-// 拼讀選圖：看注音，從四張圖裡挑出來
+// 拼讀選圖：看直式注音，從四張圖裡挑出來
 WORDS.forEach(([slug, ch, zy]) => BOPO.push({
   k: `b.read.${slug}`, g: '注音拼讀',
   make: () => {
     const others = shuffle(WORDS.filter(w => w[0] !== slug)).slice(0, 3);
-    return { ask: '這是什麼？', bopo: zy,
-      choices: shuffle([[slug, ch], ...others.map(o => [o[0], o[1]])]
-        .map(([s, c]) => ({ img: s, ok: s === slug }))),
-      hint: `<b>${zy}</b> 拼起來是「<b>${ch}</b>」。` };
+    return { ask: '這是什麼？', zy: zhuyin(zy),
+      choices: shuffle([slug, ...others.map(o => o[0])]).map(s => ({ img: s, ok: s === slug })),
+      hint: `<b>${zy.join('')}</b> 拼起來是「<b>${ch}</b>」。` };
   }
 }));
-// 看圖選注音：拼得對不對（含形近符號干擾）
+// 看圖選注音：四個直式注音，只有一個對
 WORDS.forEach(([slug, ch, zy]) => BOPO.push({
   k: `b.spell.${slug}`, g: '看圖拼注音',
   make: () => {
-    const wrong = uniq([mutateBopo(zy), mutateBopo(zy), mutateBopo(zy), swapTone(zy)])
-      .filter(z => z !== zy).slice(0, 3);
-    while (wrong.length < 3) { const z = swapTone(zy); if (z !== zy && !wrong.includes(z)) wrong.push(z); }
-    return { ask: '「' + ch + '」的注音是哪一個？', img: slug,
-      choices: shuffle([zy, ...wrong].map(z => ({ cjk: z, ok: z === zy }))),
-      hint: `「${ch}」唸 <b>${zy}</b>。` };
+    const wrong = [];
+    for (let g = 0; wrong.length < 3 && g < 60; g++) {
+      const m = mutateWord(zy).join('|');
+      if (m !== zy.join('|') && !wrong.includes(m)) wrong.push(m);
+    }
+    return { ask: `「${ch}」的注音是哪一個？`, img: slug,
+      choices: shuffle([zy.join('|'), ...wrong]).map(s =>
+        ({ zy: s.split('|'), ok: s === zy.join('|') })),
+      hint: `「${ch}」唸 <b>${zy.join(' ')}</b>。` };
   }
 }));
-// 聲調：同一個拼音換四個調
+// 聲調：挖掉其中一個字的聲調
 WORDS.forEach(([slug, ch, zy]) => BOPO.push({
   k: `b.tone.${slug}`, g: '聲調',
-  make: () => ({ ask: '「' + ch + '」是第幾聲？', img: slug,
-    choices: TONES.map((t, i) => ({ cjk: baseOf(zy) + t, ok: t === toneOf(zy) })),
-    hint: `${['一','二','三','四'][TONES.indexOf(toneOf(zy))]}聲，寫作 <b>${zy}</b>。` })
+  make: () => {
+    const i = rnd(zy.length), target = zy[i], no = toneNo(target);
+    return { ask: `「${ch}」的「${ch[i]}」是第幾聲？`, img: slug,
+      sub: zhuyin(zy, ch),
+      // 正解一定要在選項裡：輕聲的詞（獅子、兔子…）也要給得出「輕聲」這個選項
+      choices: shuffle(uniq([no, ...shuffle([1, 2, 3, 4, 5]).filter(n => n !== no)]).slice(0, 4))
+        .map(n => ({ zy: [baseOf(target) + TONES[n - 1]],
+                     tag: ['一聲','二聲','三聲','四聲','輕聲'][n - 1], ok: n === no })),
+      hint: `「${ch[i]}」是<b>${['一','二','三','四','輕'][no - 1]}聲</b>，寫作 <b>${target}</b>。` };
+  }
 }));
 // 形近符號辨別
 SIMILAR.forEach(([a, b]) => BOPO.push({
   k: `b.sim.${a}${b}`, g: '形近符號',
   make: () => {
-    const t = pick([a, b]), partner = t === a ? b : a;   // 形近的那一個一定在選項裡
-    const others = shuffle(uniq(SIMILAR.flat()).filter(x => x !== t && x !== partner)).slice(0, 2);
-    return { ask: '哪一個跟上面一樣？', bopo: t,
-      choices: shuffle([t, partner, ...others]).map(z => ({ cjk: z, ok: z === t })),
+    const t = pick([a, b]), partner = t === a ? b : a;
+    const others = shuffle(ALLSYM.filter(x => x !== t && x !== partner)).slice(0, 2);
+    return { ask: '哪一個跟上面一樣？', zy: zhuyin([t]),
+      choices: shuffle([t, partner, ...others]).map(z => ({ zy: [z], ok: z === t })),
       hint: `<b>${a}</b> 和 <b>${b}</b> 長得像，要看清楚筆畫差在哪裡。` };
   }
 }));
-function mutateBopo(zy) {
-  const base = baseOf(zy), t = toneOf(zy);
-  for (const [a, b] of shuffle(SIMILAR.slice())) {
-    if (base.includes(a)) return base.replace(a, b) + t;
-    if (base.includes(b)) return base.replace(b, a) + t;
-  }
-  return swapTone(zy);
-}
-const swapTone = zy => baseOf(zy) + pick(TONES.filter(t => t !== toneOf(zy)));
 
+/* ---------- 英文 ----------
+   b/d/p/q、m/n、u/v 這些是小一最常搞混的字母，剛好也是精細視覺辨別。 */
+const CONFUSE = { b:'dpq', d:'bpq', p:'bdq', q:'bdp', m:'nw', n:'mur', u:'vnw', v:'uwy',
+  w:'vmu', i:'jl', j:'ig', l:'it', g:'qj', s:'z', z:'s', f:'t', t:'fl', c:'eo', e:'co',
+  o:'ceq', a:'oe', h:'nk', k:'xh', r:'nv', x:'yk', y:'vx' };
+const ENG_WORDS = WORDS.filter(w => w[3].length <= 9);
+
+/** 把一個英文單字改一個字母，改成形近的那個 */
+function misspell(w) {
+  for (let g = 0; g < 40; g++) {
+    const i = rnd(w.length), c = w[i].toLowerCase();
+    if (!CONFUSE[c]) continue;
+    const r = pick(CONFUSE[c].split(''));
+    const out = w.slice(0, i) + r + w.slice(i + 1);
+    if (out !== w) return out;
+  }
+  return w.slice(0, -1) + pick('aeiou'.split(''));
+}
+
+const ENGLISH = [];
+// 看圖選英文（干擾項是形近拼錯）
+ENG_WORDS.forEach(([slug, ch, zy, en]) => ENGLISH.push({
+  k: `e.word.${slug}`, g: '看圖選單字',
+  make: () => {
+    const wrong = [];
+    for (let g = 0; wrong.length < 3 && g < 60; g++) {
+      const m = misspell(en);
+      if (m !== en && !wrong.includes(m)) wrong.push(m);
+    }
+    return { ask: '這個英文怎麼拼？', img: slug, sub: zhuyin(zy, ch),
+      choices: shuffle([en, ...wrong]).map(s => ({ en: s, ok: s === en })),
+      hint: `${ch}是 <b>${en}</b>。` };
+  }
+}));
+// 英文選圖
+ENG_WORDS.forEach(([slug, ch, zy, en]) => ENGLISH.push({
+  k: `e.pic.${slug}`, g: '看單字選圖',
+  make: () => {
+    const others = shuffle(ENG_WORDS.filter(w => w[0] !== slug)).slice(0, 3);
+    return { ask: '這是什麼？', en: en,
+      choices: shuffle([slug, ...others.map(o => o[0])]).map(s => ({ img: s, ok: s === slug })),
+      hint: `<b>${en}</b> 是「${ch}」。` };
+  }
+}));
+// 首字母（b/d/p/q 這組最容易錯，也最值得練）
+uniq(ENG_WORDS.map(w => w[3][0])).forEach(letter => ENGLISH.push({
+  k: `e.first.${letter}`, g: '開頭字母',
+  make: () => {
+    const w = pick(ENG_WORDS.filter(x => x[3][0] === letter));
+    const near = (CONFUSE[letter] || 'aeiou').split('');
+    const others = shuffle(uniq([...near, ...'abcdefghijklmnopqrstuvwxyz'.split('')])
+      .filter(c => c !== letter)).slice(0, 3);
+    return { ask: `「${w[1]}」的英文是 ${w[3].slice(1)}…，開頭是哪個字母？`, img: w[0],
+      choices: shuffle([letter, ...others]).map(c => ({ en: c, big: true, ok: c === letter })),
+      hint: `<b>${w[3]}</b>，開頭是 <b>${letter}</b>。` };
+  }
+}));
 /* ---------- 時鐘與錢幣 ---------- */
 function clockSVG(h, m, size = 128) {
   const c = size / 2, r = c - 4;
@@ -581,7 +744,8 @@ const SUBJECTS = [
   { id: 'math',  name: '數學',     ic: '＋', c: '#C94F43', d: '湊十、20 以內加減、進位退位、比大小', items: MATH },
   { id: 'bopo',  name: '注音',     ic: 'ㄅ', c: '#3B7FB5', d: '拼讀、聲調、形近符號辨別', items: BOPO },
   { id: 'clock', name: '時鐘錢幣', ic: '🕐', c: '#3B8F63', d: '認時刻、數錢幣、找零', items: CLOCK },
-  { id: 'hanzi', name: '國字',     ic: '字', c: '#8A5BA8', d: '形近字辨別（筆順描字下一版加）', items: HANZI }
+  { id: 'hanzi', name: '國字',     ic: '字', c: '#8A5BA8', d: '形近字辨別（筆順描字下一版加）', items: HANZI },
+  { id: 'eng',   name: '英文',     ic: 'A',  c: '#C9772B', d: '看圖選單字、看單字選圖、開頭字母', items: ENGLISH }
 ];
 const ALL = {};
 SUBJECTS.forEach(s => s.items.forEach(it => { it.subj = s.id; ALL[it.k] = it; }));
@@ -665,7 +829,9 @@ function render() {
   if (q.svg) add('', q.svg);
   if (q.row) add('', `<div style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;max-width:300px">${q.row}</div>`);
   if (q.big) add('big', q.big);
-  if (q.bopo) add('bopo', q.bopo);
+  if (q.zy) add('', q.zy);
+  if (q.en) add('en', q.en);
+  if (q.sub) add('sub', q.sub);
   if (q.cjkBig) add('big', `<span style="font-family:var(--cjk)">${q.cjkBig}</span>`);
 
   const ch = $('#choices'); ch.replaceChildren();
@@ -676,6 +842,8 @@ function render() {
   q.choices.forEach(c => {
     const b = el('button', 'ch');
     if (c.img) { const i = el('img'); i.src = `img/${c.img}.png`; i.alt = ''; b.append(i); }
+    else if (c.zy) b.innerHTML = zhuyin(c.zy) + (c.tag ? `<span class="tag">${c.tag}</span>` : '');
+    else if (c.en) b.innerHTML = `<span class="en${c.big ? ' big' : ''}">${c.en}</span>`;
     else if (c.cjk) b.innerHTML = `<span class="cjkbig">${c.cjk}</span>`;
     else b.textContent = c.t;
     b.onclick = () => {
@@ -834,6 +1002,7 @@ function label(k) {
   if (p[0] === 'm') return p[2] || p[1];
   if (p[0] === 'b') { const w = WORDS.find(w => w[0] === p[2]); return w ? w[1] : p[2]; }
   if (p[0] === 'h') return p[2];
+  if (p[0] === 'e') { const w = WORDS.find(w => w[0] === p[2]); return w ? w[3] : p[2]; }
   if (p[0] === 'c') return p[1] === 'five' ? p[2] + ' 分' : p[2] + ' 點';
   if (p[0] === '$') return p[1] === 'pay' ? '找 ' + (50 - +p[2]) + ' 元' : '≤' + p[2] + ' 元';
   return p[1];
