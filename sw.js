@@ -1,6 +1,6 @@
 /* 小一練功房 Service Worker — 整個 app 離線可用。
    安裝時預先快取全部檔案，之後一律 cache-first。版本字串由檔案內容雜湊產生。 */
-const VERSION = 'a872f0ebbb62';
+const VERSION = '2e4e00312aad';
 const CACHE = 'grade1-' + VERSION;
 const ASSETS = [
   "./",

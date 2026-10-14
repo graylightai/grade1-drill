@@ -961,8 +961,8 @@ const MIX = [
   ['紅', '黑', '深紅'], ['藍', '黑', '深藍'], ['白', '黑', '灰'],
   ['紅', '綠', '棕'], ['橙', '白', '粉紅'], ['黃', '紅', '橙']
 ];
-const COLOR = MIX.map(([a, b, r]) => ({
-  k: `col.mix.${a}${b}`, g: '混色', subj: 'color',
+const MIXQ = MIX.map(([a, b, r]) => ({
+  k: `col.mix.${a}${b}`, g: '兩色相加', subj: 'mix',
   make: () => {
     const others = shuffle(Object.keys(COLORS).filter(c => c !== r && c !== a && c !== b)).slice(0, 3);
     return { ask: '這兩個顏色混在一起，會變成什麼顏色？',
@@ -974,8 +974,9 @@ const COLOR = MIX.map(([a, b, r]) => ({
 }));
 // 色階排序：由淺到深點出來。這是「序列化」，六歲左右的認知里程碑
 const HUES = [[0, '紅'], [28, '橙'], [45, '黃'], [140, '綠'], [205, '藍'], [275, '紫'], [330, '粉']];
-HUES.forEach(([h, name]) => [4, 5, 6].forEach(n => COLOR.push({
-  k: `col.ramp.${name}${n}`, g: '色階排序', subj: 'color',
+const RAMPQ = [];
+HUES.forEach(([h, name]) => [4, 5, 6].forEach(n => RAMPQ.push({
+  k: `col.ramp.${name}${n}`, g: '由淺到深', subj: 'ramp',
   make: () => {
     const lo = 30, hi = 88, step = (hi - lo) / (n - 1);
     const items = Array.from({ length: n }, (_, i) => ({
@@ -1107,7 +1108,8 @@ const SUBJECTS = [
   { id: 'clock', name: '時鐘',     ic: '🕐', c: '#3B8F63', d: '認到一分、時間差、倒推時刻', items: CLOCK },
   { id: 'hanzi', name: '國字',     ic: '字', c: '#8A5BA8', d: '筆順描字、數筆畫、形近字辨別', items: HANZI },
   { id: 'eng',   name: '英文',     ic: 'A',  c: '#C9772B', d: '大小寫對應、看圖選單字、開頭字母', items: ENGLISH },
-  { id: 'color', name: '顏色',     ic: '◓',  c: '#D1577E', d: '兩色混合會變什麼色、色階由淺到深排序', items: COLOR },
+  { id: 'mix',   name: '混色',     ic: '◓',  c: '#D1577E', d: '兩個顏色混在一起會變成什麼色', items: MIXQ },
+  { id: 'ramp',  name: '色階',     ic: '階', c: '#2A9D9D', d: '把同一個顏色由淺到深排出來', items: RAMPQ },
   { id: 'logic', name: '圖形邏輯', ic: '◆',  c: '#4C6EC5', d: '找規律、旋轉接續、圖形矩陣', items: LOGIC }
 ];
 const ALL = {};
