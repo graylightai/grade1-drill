@@ -116,12 +116,15 @@ p.lede{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.75;max-wi
 .zy .col{display:flex;flex-direction:column;align-items:center;gap:.14em}
 .zy .han{font-size:.6em;font-weight:600;line-height:1;color:var(--muted)}
 .syl{position:relative;display:flex;flex-direction:column;align-items:center;
-  line-height:1.02;padding-right:.64em;padding-top:.66em}
+  line-height:1.02;padding-right:.52em;padding-top:.42em}
 .syl b{font-weight:400;display:block}
-/* 聲調符號放大到音節的 0.82 倍：筆畫細，太小小孩根本分不出ˊ和ˋ */
-.syl .tn{position:absolute;right:0;bottom:.02em;font-size:.82em;line-height:1;font-style:normal}
-/* 輕聲的點不必跟著放大：它沒有形近的對手，要分辨的是ˊ、ˇ、ˋ三個 */
-.syl .tn.up{right:auto;left:50%;transform:translateX(-50%);top:0;bottom:auto;font-size:.6em}
+/* 聲調改用 SVG 自己畫：字型裡的ˊˋ是修飾符號，實際墨水只佔字框一小角，
+   放大字級會連帶把定位弄歪。自己畫就能把筆畫長度、粗細、位置全部定死。 */
+.syl .tn{position:absolute;right:0;bottom:.04em;width:.46em;height:.74em;
+  fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+.syl .tn.up{right:auto;left:50%;transform:translateX(-50%);top:0;bottom:auto;
+  width:.34em;height:.34em;stroke:none}
+.syl .tn .dot{fill:currentColor}
 .card .zy{font-size:40px}
 .card .sub{margin-top:-2px}
 .card .sub .zy{font-size:22px}
@@ -485,14 +488,19 @@ const WORDS = [
 const TONES = ['', 'ˊ', 'ˇ', 'ˋ', '˙'];
 const baseOf = z => z.replace(/[ˊˇˋ˙]/g, '');
 const toneOf = z => (z.match(/[ˊˇˋ˙]/) || [''])[0];
-const toneNo = z => { const t = toneOf(z); return t === '' ? 1 : t === '˙' ? 5 : ' ˊˇˋ'.indexOf(t); };
+// ˊ是二聲、ˇ三聲、ˋ四聲，所以 indexOf 要 +2（之前用 ' ˊˇˋ' 查表整組少一聲）
+const toneNo = z => { const t = toneOf(z); return t === '' ? 1 : t === '˙' ? 5 : 'ˊˇˋ'.indexOf(t) + 2; };
 
 /** 一個音節 → 直式 HTML */
+const TONE_SVG = {
+  'ˊ': '<svg class="tn" viewBox="0 0 10 16" aria-hidden="true"><path d="M2.3 12.6 7.7 3.4"/></svg>',
+  'ˇ': '<svg class="tn" viewBox="0 0 10 16" aria-hidden="true"><path d="M2.1 4.4 5 12.4 7.9 4.4"/></svg>',
+  'ˋ': '<svg class="tn" viewBox="0 0 10 16" aria-hidden="true"><path d="M2.3 3.4 7.7 12.6"/></svg>',
+  '˙': '<svg class="tn up" viewBox="0 0 10 10" aria-hidden="true"><circle class="dot" cx="5" cy="5" r="3.1"/></svg>'
+};
 function syl(zy) {
   const t = toneOf(zy), syms = baseOf(zy).split('');
-  const mark = t === '' ? '' :
-    t === '˙' ? `<i class="tn up">˙</i>` : `<i class="tn">${t}</i>`;
-  return `<span class="syl">${syms.map(s => `<b>${s}</b>`).join('')}${mark}</span>`;
+  return `<span class="syl">${syms.map(s => `<b>${s}</b>`).join('')}${TONE_SVG[t] || ''}</span>`;
 }
 /** 一個詞（含多個音節）→ 直式注音 HTML；withHan 會把國字排在注音右邊 */
 function zhuyin(sylArr, han) {
