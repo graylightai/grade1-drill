@@ -129,6 +129,21 @@ p.lede{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.75;max-wi
 .card .sub{margin-top:-2px}
 .card .sub .zy{font-size:22px}
 .card .en{font-family:var(--display);font-size:44px;font-weight:600;letter-spacing:.01em}
+
+/* ---- 筆順描字 ---- */
+.tr{width:min(86vw,330px);height:min(86vw,330px);display:block;touch-action:none}
+.tg-box{fill:var(--surface);stroke:var(--line);stroke-width:4}
+.tg-line{stroke:var(--rule);stroke-width:3;stroke-dasharray:14 16;fill:none;opacity:.75}
+.st-ghost{fill:var(--ink);opacity:.1}
+.st-done{fill:var(--ink)}
+.st-cur{fill:var(--red);opacity:.22}
+.st-start{fill:var(--red);opacity:.9}
+.ink{fill:none;stroke:var(--red);stroke-width:34;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.trbar{display:flex;align-items:center;gap:10px;justify-content:center}
+.trbar .n{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.trbar button{padding:9px 16px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface);font-size:13.5px}
+.trwhy{font-size:13.5px;color:var(--red);text-align:center;min-height:19px;line-height:1.5}
 .ch .zy{font-size:25px}
 .ch .zy.n3{font-size:19px}
 .ch .zy.n4{font-size:16px}
@@ -248,6 +263,9 @@ details.note2 .body ul{margin:8px 0;padding-left:18px}
         </ul>
         <p>「弱點診斷」頁會告訴你她<b>卡在哪一個數字</b>，不是只給一個分數。</p>
         <p>近距離作業一樣要顧眼睛：手機拿在 30 公分左右，每 10 分鐘會跳出休息提醒，看遠 20 秒。</p>
+        <p><b>關於筆順：</b>筆順資料來自開源的 Make Me a Hanzi，字形是楷體，但它的筆順沿用中國大陸的規範。
+        絕大多數字跟教育部標準一致，少數字（例如「方」「出」「比」）的順序不同。
+        真正要對筆順請以學校教的為準，這裡是熟練用的。</p>
       </div>
     </details>
   </main>
@@ -736,14 +754,18 @@ for (let m = 5; m <= 55; m += 5) if (m !== 30) CLOCK.push({
     hint: `50 － ${price} ＝ <b>${50 - price}</b> 元。` })
 }));
 
-/* ---------- 國字：形近字辨別 ---------- */
+/* ---------- 國字 ----------
+   筆順資料來自 Make Me a Hanzi，座標是 1024 的字框、y 軸朝上，
+   所以畫的時候整組套 scale(1,-1) translate(0,-900)。
+   注意：這份資料的筆順沿用中國大陸的規範，絕大多數字跟教育部標準一致，
+   少數字（如「方」「出」）會有差異，家長須知裡有說明。 */
 const HANZI_SIM = [['日','目'],['人','入'],['大','犬'],['土','士'],['木','禾'],['手','毛'],
   ['千','干'],['天','夫'],['刀','力'],['白','百'],['王','玉'],['牛','午'],['田','由'],
   ['自','白'],['石','右'],['元','兄'],['十','土'],['水','永'],['免','兔'],['未','末']];
 const HANZI = HANZI_SIM.map(([a, b]) => ({
-  k: `h.sim.${a}${b}`, g: '形近國字',
+  k: `h.sim.${a}${b}`, g: '形近國字', subj: 'hanzi',
   make: () => {
-    const t = pick([a, b]), partner = t === a ? b : a;   // 形近的那一個一定在選項裡
+    const t = pick([a, b]), partner = t === a ? b : a;
     const others = shuffle(uniq(HANZI_SIM.flat()).filter(x => x !== t && x !== partner)).slice(0, 2);
     return { ask: '哪一個跟上面一樣？', cjkBig: t,
       choices: shuffle([t, partner, ...others]).map(z => ({ cjk: z, ok: z === t })),
@@ -751,12 +773,96 @@ const HANZI = HANZI_SIM.map(([a, b]) => ({
   }
 }));
 
+let STROKES = null;                                   // 字 → {s:[筆畫輪廓], m:[[x,y,x,y…]]}
+const FLIP = 'scale(1,-1) translate(0,-900)';         // 資料的 y 軸朝上
+const dataY = y => 900 - y;                           // 資料座標 → viewBox 座標
+const medPts = m => { const p = []; for (let i = 0; i < m.length; i += 2) p.push([m[i], dataY(m[i + 1])]); return p; };
+
+/** 田字格 + 整個字的淡底 */
+function grid() {
+  return `<rect x="24" y="24" width="976" height="976" rx="14" class="tg-box"/>
+    <path d="M24 512H1000M512 24V1000M24 24 1000 1000M1000 24 24 1000" class="tg-line"/>`;
+}
+function charSVG(ch, { done = 0, cur = -1, ink = true } = {}) {
+  const d = STROKES[ch];
+  const all = d.s.map((p, i) =>
+    `<path d="${p}" class="${i < done ? 'st-done' : i === cur ? 'st-cur' : 'st-ghost'}"/>`).join('');
+  let dot = '';
+  if (cur >= 0) {
+    const p = medPts(d.m[cur])[0];
+    dot = `<circle cx="${p[0]}" cy="${p[1]}" r="34" class="st-start"/>`;
+  }
+  return `<svg class="tr" viewBox="0 0 1024 1024">${grid()}
+    <g transform="${FLIP}">${all}</g>${dot}
+    ${ink ? '<polyline class="ink" points=""/>' : ''}</svg>`;
+}
+
+/* ---------- 筆跡比對 ---------- */
+function resample(pts, n) {
+  if (pts.length < 2) return Array(n).fill(pts[0] || [0, 0]);
+  const seg = [], total = pts.reduce((a, p, i) =>
+    i ? (seg.push(Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1])), a + seg[i - 1]) : 0, 0);
+  if (!total) return Array(n).fill(pts[0]);
+  const out = [pts[0]]; let acc = 0, i = 1, step = total / (n - 1), target = step;
+  while (out.length < n && i < pts.length) {
+    const d = seg[i - 1];
+    if (acc + d >= target) {
+      const t = (target - acc) / d;
+      out.push([pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t,
+                pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]);
+      target += step;
+    } else { acc += d; i++; }
+  }
+  while (out.length < n) out.push(pts[pts.length - 1]);
+  return out;
+}
+const pathLen = p => p.reduce((a, q, i) => i ? a + Math.hypot(q[0] - p[i - 1][0], q[1] - p[i - 1][1]) : 0, 0);
+const meanDist = (a, b) => a.reduce((s, p, i) => s + Math.hypot(p[0] - b[i][0], p[1] - b[i][1]), 0) / a.length;
+
+/** 回傳 {ok, why}。座標都在 1024 的 viewBox 空間 */
+function matchStroke(user, med) {
+  if (user.length < 2) return { ok: false, why: '太短了，要沿著筆畫拖過去' };
+  const mLen = pathLen(med), uLen = pathLen(user);
+  if (mLen < 90) {                                     // 點這種極短筆畫：落在附近就算
+    const c = med[Math.floor(med.length / 2)];
+    const near = user.some(p => Math.hypot(p[0] - c[0], p[1] - c[1]) < 230);
+    return near ? { ok: true } : { ok: false, why: '位置不對' };
+  }
+  if (uLen < mLen * 0.38) return { ok: false, why: '沒有寫完整筆' };
+  const U = resample(user, 16), M = resample(med, 16);
+  const fwd = meanDist(U, M), rev = meanDist(U, M.slice().reverse());
+  if (rev < fwd * 0.75 && rev < 200) return { ok: false, why: '方向反了，要照箭頭的方向寫' };
+  const startD = Math.hypot(U[0][0] - M[0][0], U[0][1] - M[0][1]);
+  if (startD > 300) return { ok: false, why: '起筆的位置不對' };
+  return fwd < 200 ? { ok: true } : { ok: false, why: '跟筆畫差太多' };
+}
+
+/* ---------- 兩種題型 ---------- */
+function buildHanziItems() {
+  const chars = Object.keys(STROKES);
+  chars.forEach(ch => {
+    const n = STROKES[ch].s.length;
+    HANZI.push({                                       // 幾畫（選擇題）
+      k: `h.count.${ch}`, g: '數筆畫', subj: 'hanzi',
+      make: () => ({ ask: '這個字有幾畫？', cjkBig: ch,
+        choices: distract(n, 1, 24).map(v => ({ t: v, ok: v === n })),
+        hint: `「${ch}」有 <b>${n}</b> 畫。` })
+    });
+    if (n <= 12) HANZI.push({                          // 描字（手寫）
+      k: `h.trace.${ch}`, g: '筆順描字', subj: 'hanzi',
+      make: () => ({ kind: 'trace', ch, ask: `照著筆順寫「${ch}」` })
+    });
+  });
+  chars.forEach(ch => { ALL[`h.count.${ch}`] = HANZI.find(i => i.k === `h.count.${ch}`); });
+  HANZI.forEach(i => { ALL[i.k] = i; });
+}
+
 /* ---------- 科目 ---------- */
 const SUBJECTS = [
   { id: 'math',  name: '數學',     ic: '＋', c: '#C94F43', d: '湊十、20 以內加減、進位退位、比大小', items: MATH },
   { id: 'bopo',  name: '注音',     ic: 'ㄅ', c: '#3B7FB5', d: '拼讀、聲調、形近符號辨別', items: BOPO },
   { id: 'clock', name: '時鐘錢幣', ic: '🕐', c: '#3B8F63', d: '認時刻、數錢幣、找零', items: CLOCK },
-  { id: 'hanzi', name: '國字',     ic: '字', c: '#8A5BA8', d: '形近字辨別（筆順描字下一版加）', items: HANZI },
+  { id: 'hanzi', name: '國字',     ic: '字', c: '#8A5BA8', d: '筆順描字、數筆畫、形近字辨別', items: HANZI },
   { id: 'eng',   name: '英文',     ic: 'A',  c: '#C9772B', d: '看圖選單字、看單字選圖、開頭字母', items: ENGLISH }
 ];
 const ALL = {};
@@ -833,6 +939,7 @@ function render() {
 
   const item = s.list[s.i];
   const q = item.make();
+  if (q.kind === 'trace') return renderTrace(item, q);
   const card = $('#card'); card.replaceChildren();
   const add = (cls, html) => { const d = el('div', cls); d.innerHTML = html; card.append(d); return d; };
 
@@ -885,6 +992,102 @@ function render() {
     };
     ch.append(b);
   });
+}
+
+/* ---------- 描字 ---------- */
+function renderTrace(item, q) {
+  const s = session, d = STROKES[q.ch], n = d.s.length;
+  let cur = 0, misses = 0, tries = 0, demos = 0;
+  const t0 = performance.now();
+
+  const card = $('#card'); card.replaceChildren();
+  const ask = el('div', 'ask'); ask.textContent = q.ask; card.append(ask);
+  const box = el('div'); card.append(box);
+
+  const bar = el('div', 'trbar');
+  bar.innerHTML = `<span class="n" id="trn"></span><button id="trdemo" type="button">看一次怎麼寫</button>`;
+  const why = el('div', 'trwhy');
+  $('#choices').replaceChildren();
+  $('#feedback').replaceChildren(bar, why);
+
+  let svg, ink, pts = [], drawing = false;
+  function paint() {
+    box.innerHTML = charSVG(q.ch, { done: cur, cur });
+    svg = box.querySelector('svg'); ink = svg.querySelector('.ink');
+    $('#trn').textContent = `第 ${Math.min(cur + 1, n)} / ${n} 畫`;
+    wire();
+  }
+  const toSvg = e => {
+    const r = svg.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width * 1024, (e.clientY - r.top) / r.height * 1024];
+  };
+  function wire() {
+    svg.addEventListener('pointerdown', e => {
+      if (cur >= n) return;
+      drawing = true; pts = [toSvg(e)]; svg.setPointerCapture(e.pointerId); ink.setAttribute('points', '');
+    });
+    svg.addEventListener('pointermove', e => {
+      if (!drawing) return;
+      pts.push(toSvg(e));
+      ink.setAttribute('points', pts.map(p => p.map(Math.round).join(',')).join(' '));
+    });
+    const end = () => { if (drawing) { drawing = false; judge(); } };
+    svg.addEventListener('pointerup', end);
+    svg.addEventListener('pointercancel', end);
+    svg.addEventListener('pointerleave', end);
+  }
+
+  function judge() {
+    const r = matchStroke(pts, medPts(d.m[cur]));
+    if (r.ok) {
+      sfx.good(cur + 1); why.textContent = ''; tries = 0; cur++;
+      if (cur >= n) return done();
+      paint();
+    } else {
+      misses++; tries++; sfx.bad();
+      why.textContent = r.why + (tries >= 3 ? '　看一下示範吧' : '');
+      if (tries >= 3) { demo(); tries = 0; }
+      else setTimeout(paint, 450);
+    }
+  }
+
+  /* 用 mask 沿著筆畫中線把輪廓一點一點露出來 */
+  function demo() {
+    demos++;
+    const mid = medPts(d.m[cur]).map(p => [p[0], dataY(p[1])]);   // 回到資料座標給 mask 用
+    const dd = 'M' + mid.map(p => p.join(' ')).join('L');
+    box.innerHTML = `<svg class="tr" viewBox="0 0 1024 1024">${grid()}
+      <defs><mask id="mk"><path id="mp" d="${dd}" stroke="#fff" stroke-width="200"
+        fill="none" stroke-linecap="round" stroke-linejoin="round" transform="${FLIP}"/></mask></defs>
+      <g transform="${FLIP}">
+        ${d.s.map((p, i) => `<path d="${p}" class="${i < cur ? 'st-done' : 'st-ghost'}"/>`).join('')}
+      </g>
+      <path d="${d.s[cur]}" class="st-done" transform="${FLIP}" mask="url(#mk)"/></svg>`;
+    const mp = box.querySelector('#mp'), L = mp.getTotalLength();
+    mp.style.strokeDasharray = L; mp.style.strokeDashoffset = L;
+    const a = mp.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }],
+      { duration: Math.max(500, L * 1.1), easing: 'ease-in-out', fill: 'forwards' });
+    a.onfinish = () => setTimeout(paint, 420);
+  }
+
+  function done() {
+    const ms = performance.now() - t0;
+    const pass = misses <= Math.floor(n / 4) && demos === 0;
+    grade(item.k, pass, pass ? ms : 99999);     // 用了示範或錯太多就不算熟
+    s[pass ? 'ok' : 'bad']++; s.marks[s.i] = pass ? 'ok' : 'no'; drawBar();
+    if (!pass && s.extra < 3) { s.extra++; s.list.splice(Math.min(s.i + 3, s.list.length), 0, item); }
+    box.innerHTML = charSVG(q.ch, { done: n, cur: -1, ink: false });
+    sfx.win();
+    why.textContent = '';
+    $('#trn').textContent = pass ? `${n} 畫，全對！` : `${n} 畫，寫完了`;
+    const go = el('button', 'primary'); go.textContent = '下一題';
+    go.style.marginTop = '10px'; go.onclick = next;
+    $('#feedback').append(go);
+    bar.querySelector('#trdemo').disabled = true;
+  }
+
+  paint();
+  bar.querySelector('#trdemo').onclick = () => { if (cur < n) demo(); };
 }
 
 function next() { session.i++; render(); }
@@ -1013,7 +1216,7 @@ function label(k) {
   const p = k.split('.');
   if (p[0] === 'm') return p[2] || p[1];
   if (p[0] === 'b') { const w = WORDS.find(w => w[0] === p[2]); return w ? w[1] : p[2]; }
-  if (p[0] === 'h') return p[2];
+  if (p[0] === 'h') return p[1] === 'sim' ? p[2] : p[2];
   if (p[0] === 'e') { const w = WORDS.find(w => w[0] === p[2]); return w ? w[3] : p[2]; }
   if (p[0] === 'c') return p[1] === 'five' ? p[2] + ' 分' : p[2] + ' 點';
   if (p[0] === '$') return p[1] === 'pay' ? '找 ' + (50 - +p[2]) + ' 元' : '≤' + p[2] + ' 元';
@@ -1046,6 +1249,13 @@ document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dat
 $('#clock').textContent = Math.floor(elapsed.s / 60);
 syncSet();
 show('home');
+
+/* 筆順資料 435 KB，單獨放一個檔。載好再把描字與數筆畫題目掛上去，
+   其他四科不等它。離線時由 Service Worker 從快取給。 */
+fetch('strokes.json')
+  .then(r => r.ok ? r.json() : Promise.reject(r.status))
+  .then(j => { STROKES = j; buildHanziItems(); if (view === 'home') buildHome(); })
+  .catch(() => { STROKES = null; });
 
 /* 離線：第一次連網開啟時把整個 app 抓進快取 */
 const secure = location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(location.hostname);

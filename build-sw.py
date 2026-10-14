@@ -10,7 +10,7 @@ import os, hashlib, json
 root = os.path.dirname(os.path.abspath(__file__))
 os.chdir(root)
 
-assets = ['./', 'index.html', 'manifest.json', 'fonts.css']
+assets = ['./', 'index.html', 'manifest.json', 'fonts.css', 'strokes.json']
 assets += sorted('img/' + f for f in os.listdir('img') if f.endswith('.png'))
 assets += sorted('fonts/' + f for f in os.listdir('fonts') if f.endswith('.woff2'))
 
