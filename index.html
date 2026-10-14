@@ -135,6 +135,10 @@ p.lede{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.75;max-wi
 .tg-box{fill:var(--surface);stroke:var(--line);stroke-width:4}
 .tg-line{stroke:var(--rule);stroke-width:3;stroke-dasharray:14 16;fill:none;opacity:.75}
 .st-ghost{fill:var(--ink);opacity:.1}
+.bs{fill:none;stroke-width:78;stroke-linecap:round;stroke-linejoin:round}
+.bs-ghost{stroke:var(--ink);opacity:.12}
+.bs-done{stroke:var(--ink)}
+.bs-cur{stroke:var(--red);opacity:.26}
 .st-done{fill:var(--ink)}
 .st-cur{fill:var(--red);opacity:.22}
 .st-start{fill:var(--red);opacity:.9}
@@ -164,14 +168,17 @@ p.lede{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.75;max-wi
 .mixq{font-family:var(--display);font-size:42px;font-weight:600;color:var(--muted)}
 .ch .sw{display:block;width:60px;height:46px;border-radius:12px;
   border:2px solid color-mix(in srgb,var(--ink) 16%,transparent)}
-.ramp{display:grid;gap:10px;justify-content:center}
-.ramp button{width:100%;height:64px;border-radius:14px;border:2px solid color-mix(in srgb,var(--ink) 14%,transparent);
-  position:relative;transition:transform .12s ease,opacity .2s}
-.ramp button .no{position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 0 4px var(--red)}
-.ramp button.got{opacity:.3}
-.ramp button .seq{position:absolute;left:8px;top:50%;transform:translateY(-50%);
-  font-family:var(--display);font-weight:600;font-size:19px;color:#fff;
-  text-shadow:0 1px 3px rgba(0,0,0,.5)}
+/* 色階用拖曳排序：按住一格拖到另一格就互換 */
+.ramprow{display:grid;gap:7px;width:100%;max-width:350px;touch-action:none;margin:0 auto}
+.rampcell{height:96px;border-radius:14px;border:2px solid color-mix(in srgb,var(--ink) 14%,transparent);
+  position:relative;transition:transform .14s ease,box-shadow .14s ease;will-change:transform}
+.rampcell.over{box-shadow:0 0 0 4px var(--red)}
+.rampcell.lift{opacity:.25}
+.rampcell.bad{box-shadow:inset 0 0 0 5px var(--red)}
+.rampghost{position:fixed;z-index:90;pointer-events:none;border-radius:14px;
+  border:2px solid rgba(0,0,0,.2);box-shadow:0 12px 26px -8px rgba(0,0,0,.45);transform:scale(1.12)}
+.rampends{display:flex;justify-content:space-between;width:100%;max-width:350px;margin:6px auto 0;
+  font-size:12.5px;color:var(--muted)}
 
 /* ---- 圖形邏輯 ---- */
 .lg{display:inline-block;vertical-align:middle}
@@ -832,10 +839,27 @@ const HANZI = HANZI_SIM.map(([a, b]) => ({
   }
 }));
 
+/* 注音符號的筆畫中線（1024 字框）。注音不是漢字，Make Me a Hanzi 收的 9574 字
+   裡一個都沒有，所以這 37 個是手工描的——筆順請拿 _注音筆順校對.html 核對。
+   資料只有 4KB，直接內嵌，省掉一次 fetch 和載入順序問題。 */
+const BSTROKE = {"ㄅ":[[[369,143],[287,492],[205,881]],[[369,164],[758,164],[778,532],[614,758],[451,799]]],"ㄆ":[[[737,143],[451,471],[205,860]],[[266,307],[512,573],[799,881]]],"ㄇ":[[[225,205],[225,860]],[[225,205],[799,205],[799,860]]],"ㄈ":[[[205,205],[819,205]],[[205,205],[205,840],[799,840]]],"ㄉ":[[[246,205],[758,205],[717,573],[512,778],[348,819]],[[471,205],[348,532],[225,860]]],"ㄊ":[[[184,266],[840,266]],[[655,143],[471,553],[307,860]],[[266,717],[553,717],[778,860]]],"ㄋ":[[[225,205],[758,205],[717,573],[532,799]],[[471,205],[348,532],[225,860]]],"ㄌ":[[[266,205],[778,205],[737,573],[532,799],[369,840]],[[512,205],[369,532],[225,860]]],"ㄍ":[[[184,225],[532,430],[184,635]],[[492,410],[840,614],[492,819]]],"ㄎ":[[[184,287],[819,287]],[[594,143],[532,492],[717,717],[532,840],[348,778]]],"ㄏ":[[[184,225],[840,225]],[[307,225],[246,553],[184,881]]],"ㄐ":[[[266,164],[307,532],[532,737],[778,614]],[[635,143],[635,881]]],"ㄑ":[[[225,205],[635,512],[225,819]],[[635,512],[840,512]]],"ㄒ":[[[164,307],[860,307]],[[512,307],[512,881]]],"ㄓ":[[[307,164],[717,164]],[[512,164],[348,471],[225,635]],[[225,635],[532,799],[840,717]]],"ㄔ":[[[492,143],[369,348],[266,492]],[[410,410],[287,594],[205,717]],[[635,307],[635,901]]],"ㄕ":[[[246,184],[778,184],[778,492]],[[246,184],[246,532],[778,532]],[[246,532],[205,717],[143,901]]],"ㄖ":[[[266,164],[266,860]],[[266,164],[778,164],[778,860]],[[266,512],[778,512]],[[266,860],[778,860]]],"ㄗ":[[[266,184],[737,184],[737,532],[307,532]],[[492,532],[492,901]]],"ㄘ":[[[164,430],[860,430]],[[573,164],[553,635],[717,799],[881,758]]],"ㄙ":[[[307,225],[225,512],[184,717]],[[225,471],[594,594],[840,799]]],"ㄚ":[[[225,184],[451,532],[451,881]],[[778,184],[512,532]]],"ㄛ":[[[205,307],[778,307]],[[553,164],[492,532],[655,737],[471,860],[287,778]]],"ㄜ":[[[205,307],[778,307]],[[553,164],[492,532],[655,737],[471,860],[287,778]],[[369,573],[676,573]]],"ㄝ":[[[225,307],[819,307]],[[348,164],[328,717],[532,860],[737,758]],[[655,184],[655,553]]],"ㄞ":[[[205,287],[819,287]],[[635,143],[451,512],[246,881]],[[410,614],[819,881]]],"ㄟ":[[[717,184],[430,492],[184,737]],[[307,594],[594,758],[860,860]]],"ㄠ":[[[635,143],[430,348],[266,451]],[[266,451],[594,573],[266,696]],[[266,696],[635,819],[860,881]]],"ㄡ":[[[184,266],[819,266]],[[451,164],[369,532],[205,860]],[[410,430],[717,881]]],"ㄢ":[[[184,225],[840,225]],[[328,225],[266,573],[205,881]],[[410,532],[717,532],[676,840]]],"ㄣ":[[[184,246],[819,246]],[[348,246],[307,594],[532,778],[819,717]]],"ㄤ":[[[205,348],[819,348]],[[492,143],[451,532],[451,860]],[[451,717],[717,860],[881,860]]],"ㄥ":[[[225,246],[573,451],[225,655]],[[225,655],[573,799],[860,860]]],"ㄦ":[[[348,164],[287,492],[225,737]],[[635,164],[635,717],[860,860]]],"ㄧ":[[[143,512],[881,512]]],"ㄨ":[[[205,205],[819,840]],[[819,205],[205,840]]],"ㄩ":[[[246,184],[246,819]],[[246,819],[778,819]],[[778,184],[778,819]]]};
+
 let STROKES = null;                                   // 字 → {s:[筆畫輪廓], m:[[x,y,x,y…]]}
 const FLIP = 'scale(1,-1) translate(0,-900)';         // 資料的 y 軸朝上
 const dataY = y => 900 - y;                           // 資料座標 → viewBox 座標
 const medPts = m => { const p = []; for (let i = 0; i < m.length; i += 2) p.push([m[i], dataY(m[i + 1])]); return p; };
+
+/** 注音符號：中線就是字形，用粗圓頭線直接畫 */
+function bopoSVG(ch, { done = 0, cur = -1, ink = true } = {}) {
+  const sts = BSTROKE[ch];
+  const paths = sts.map((st, i) =>
+    `<path d="M${st.map(p => p.join(' ')).join('L')}"
+      class="bs ${i < done ? 'bs-done' : i === cur ? 'bs-cur' : 'bs-ghost'}"/>`).join('');
+  let dot = '';
+  if (cur >= 0) { const p = sts[cur][0]; dot = `<circle cx="${p[0]}" cy="${p[1]}" r="36" class="st-start"/>`; }
+  return `<svg class="tr" viewBox="0 0 1024 1024">${grid()}${paths}${dot}
+    ${ink ? '<polyline class="ink" points=""/>' : ''}</svg>`;
+}
 
 /** 田字格 + 整個字的淡底 */
 function grid() {
@@ -982,8 +1006,8 @@ HUES.forEach(([h, name]) => [4, 5, 6].forEach(n => RAMPQ.push({
     const items = Array.from({ length: n }, (_, i) => ({
       v: i, fill: `hsl(${h} 72% ${(hi - i * step).toFixed(1)}%)`
     }));
-    return { kind: 'order', ask: `從最淺到最深，依序點出來`, items: shuffle(items.slice()),
-      hint: `顏色越淺的越前面。` };
+    return { kind: 'order', ask: '把它們從最淺排到最深', items: shuffle(items.slice()),
+      hint: `按住一格拖到另一格就會互換。最淺的放最左邊。` };
   }
 })));
 
@@ -1101,10 +1125,17 @@ const LOGIC = [];
   }
 }));
 
+/* ---------- 注音筆順 ---------- */
+const BOPOW = Object.keys(BSTROKE).map(ch => ({
+  k: `bw.${ch}`, g: '注音筆順', subj: 'bopow',
+  make: () => ({ kind: 'trace', bopo: true, ch, ask: `照著筆順寫「${ch}」` })
+}));
+
 /* ---------- 科目 ---------- */
 const SUBJECTS = [
   { id: 'math',  name: '數學',     ic: '＋', c: '#C94F43', d: '湊十、20 以內加減、進位退位、比大小', items: MATH },
   { id: 'bopo',  name: '注音',     ic: 'ㄅ', c: '#3B7FB5', d: '拼讀、聲調、形近符號辨別', items: BOPO },
+  { id: 'bopow', name: '注音筆順', ic: 'ㄅ', c: '#2F7FA8', d: '37 個注音符號，照筆順描一次', items: BOPOW },
   { id: 'clock', name: '時鐘',     ic: '🕐', c: '#3B8F63', d: '認到一分、時間差、倒推時刻', items: CLOCK },
   { id: 'hanzi', name: '國字',     ic: '字', c: '#8A5BA8', d: '筆順描字、數筆畫、形近字辨別', items: HANZI },
   { id: 'eng',   name: '英文',     ic: 'A',  c: '#C9772B', d: '大小寫對應、看圖選單字、開頭字母', items: ENGLISH },
@@ -1138,6 +1169,7 @@ function tone(f, { at = 0, dur = .13, type = 'triangle', vol = .14, to = 0 } = {
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
 const sfx = {
   good: n => tone(PENTA[Math.min((n | 0), PENTA.length - 1)] || PENTA[0], { dur: .13, vol: .13 }),
+  step: () => tone(587.33, { dur: .05, vol: .05, type: 'sine' }),
   bad: () => tone(196, { dur: .18, vol: .09, type: 'sine', to: 155 }),
   win: () => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, { at: i * .09, dur: .36, vol: .14 }))
 };
@@ -1251,52 +1283,109 @@ function render() {
 /* ---------- 色階排序：由淺到深依序點 ---------- */
 function renderOrder(item, q) {
   const s = session, n = q.items.length;
-  let placed = 0, miss = 0;   // 不能叫 next，會遮蔽全域的 next()
+  let order = q.items.slice();          // 畫面上目前的排列
+  let miss = 0;
   const t0 = performance.now();
+
   const card = $('#card'); card.replaceChildren();
   const ask = el('div', 'ask'); ask.textContent = q.ask; card.append(ask);
-  const wrap = el('div', 'ramp');
-  wrap.style.gridTemplateColumns = `repeat(${n <= 4 ? 2 : 3}, minmax(0,1fr))`;
-  wrap.style.width = 'min(88vw,330px)';
-  q.items.forEach(it => {
-    const b = el('button');
-    b.style.background = it.fill;
-    b.onclick = () => {
-      if (b.classList.contains('got')) return;
-      if (it.v === placed) {
-        b.classList.add('got');
-        b.innerHTML = `<span class="seq">${++placed}</span>`;
-        sfx.good(placed);
-        if (placed >= n) finishOrder();
-      } else {
-        miss++; sfx.bad();
-        const x = el('span', 'no'); b.append(x);
-        setTimeout(() => x.remove(), 420);
-      }
-    };
-    wrap.append(b);
-  });
-  card.append(wrap);
-  $('#choices').replaceChildren();
-  $('#feedback').replaceChildren();
+  const row = el('div', 'ramprow');
+  row.style.gridTemplateColumns = `repeat(${n}, minmax(0,1fr))`;
+  card.append(row);
+  const ends = el('div', 'rampends');
+  ends.innerHTML = '<span>← 淺</span><span>深 →</span>';
+  card.append(ends);
 
-  function finishOrder() {
-    const pass = miss === 0;
-    grade(item.k, pass, pass ? performance.now() - t0 : 99999);
-    s[pass ? 'ok' : 'bad']++; s.marks[s.i] = pass ? 'ok' : 'no'; drawBar();
-    if (!pass && s.extra < 3) { s.extra++; s.list.splice(Math.min(s.i + 3, s.list.length), 0, item); }
-    if (!pass && S.hint) { const h = el('div', 'hint'); h.innerHTML = q.hint; $('#feedback').append(h); }
-    const go = el('button', 'primary'); go.textContent = '下一題';
-    go.style.marginTop = '10px'; go.onclick = goNext;
-    $('#feedback').append(go);
-    if (pass) setTimeout(goNext, 700);
+  $('#choices').replaceChildren();
+  const done = el('button', 'primary'); done.textContent = '排好了';
+  $('#feedback').replaceChildren(done);
+
+  function paint() {
+    row.replaceChildren(...order.map((it, i) => {
+      const d = el('div', 'rampcell');
+      d.style.background = it.fill; d.dataset.i = i;
+      return d;
+    }));
   }
-  function goNext() { if (session === s && s.marks[s.i]) next(); }
+  paint();
+
+  /* 拖曳：按住一格跟著手指走，放開時跟底下那一格互換 */
+  let from = -1, ghost = null, over = -1;
+  const cellAt = x => {
+    const r = row.getBoundingClientRect();
+    if (x < r.left || x > r.right) return -1;
+    return Math.max(0, Math.min(n - 1, Math.floor((x - r.left) / (r.width / n))));
+  };
+  row.addEventListener('pointerdown', e => {
+    const cell = e.target.closest('.rampcell'); if (!cell) return;
+    from = +cell.dataset.i;
+    const r = cell.getBoundingClientRect();
+    ghost = el('div', 'rampghost');
+    ghost.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;background:${order[from].fill}`;
+    document.body.append(ghost);
+    cell.classList.add('lift');
+    row.setPointerCapture(e.pointerId);
+    ghost._dx = e.clientX - r.left; ghost._dy = e.clientY - r.top;
+  });
+  row.addEventListener('pointermove', e => {
+    if (from < 0) return;
+    ghost.style.left = (e.clientX - ghost._dx) + 'px';
+    ghost.style.top = (e.clientY - ghost._dy) + 'px';
+    const t = cellAt(e.clientX);
+    if (t !== over) {
+      over = t;
+      [...row.children].forEach((c, i) => c.classList.toggle('over', i === t && t !== from));
+    }
+  });
+  const drop = () => {
+    if (from < 0) return;
+    const src = from;
+    from = -1; over = -1;                 // 先清狀態：後面任何一行出錯都不會讓拖曳卡死
+    let t = -1;
+    if (ghost) {
+      const g = ghost.getBoundingClientRect();
+      t = cellAt((g.left + g.right) / 2);
+      ghost.remove(); ghost = null;
+    }
+    if (t >= 0 && t !== src) {
+      [order[src], order[t]] = [order[t], order[src]];
+      sfx.step();
+    }
+    paint();
+  };
+  row.addEventListener('pointerup', drop);
+  row.addEventListener('pointercancel', drop);
+
+  done.onclick = () => {
+    const wrong = order.map((it, i) => it.v === i ? -1 : i).filter(i => i >= 0);
+    if (!wrong.length) {
+      sfx.good(n);
+      grade(item.k, miss === 0, miss === 0 ? performance.now() - t0 : 99999);
+      s[miss === 0 ? 'ok' : 'bad']++; s.marks[s.i] = miss === 0 ? 'ok' : 'no'; drawBar();
+      if (miss && s.extra < 3) { s.extra++; s.list.splice(Math.min(s.i + 3, s.list.length), 0, item); }
+      done.textContent = '下一題'; done.onclick = () => next();
+      setTimeout(() => { if (session === s) next(); }, 700);
+    } else {
+      miss++; sfx.bad();
+      wrong.forEach(i => {
+        const c = row.children[i]; c.classList.add('bad');
+        setTimeout(() => c.classList.remove('bad'), 900);
+      });
+      if (S.hint) {
+        let h = $('#feedback').querySelector('.hint');
+        if (!h) { h = el('div', 'hint'); h.innerHTML = q.hint; $('#feedback').prepend(h); }
+      }
+    }
+  };
 }
 
 /* ---------- 描字 ---------- */
 function renderTrace(item, q) {
-  const s = session, d = STROKES[q.ch], n = d.s.length;
+  const s = session;
+  const isB = q.bopo === true;                       // 注音用中線，國字用輪廓＋中線
+  const d = isB ? null : STROKES[q.ch];
+  const n = isB ? BSTROKE[q.ch].length : d.s.length;
+  const medOf = i => isB ? BSTROKE[q.ch][i] : medPts(d.m[i]);
   let cur = 0, misses = 0, tries = 0, demos = 0;
   const t0 = performance.now();
 
@@ -1312,7 +1401,7 @@ function renderTrace(item, q) {
 
   let svg, ink, pts = [], drawing = false;
   function paint() {
-    box.innerHTML = charSVG(q.ch, { done: cur, cur });
+    box.innerHTML = (isB ? bopoSVG : charSVG)(q.ch, { done: cur, cur });
     svg = box.querySelector('svg'); ink = svg.querySelector('.ink');
     $('#trn').textContent = `第 ${Math.min(cur + 1, n)} / ${n} 畫`;
     wire();
@@ -1338,7 +1427,7 @@ function renderTrace(item, q) {
   }
 
   function judge() {
-    const r = matchStroke(pts, medPts(d.m[cur]));
+    const r = matchStroke(pts, medOf(cur));
     if (r.ok) {
       sfx.good(cur + 1); why.textContent = ''; tries = 0; cur++;
       if (cur >= n) return done();
@@ -1354,6 +1443,7 @@ function renderTrace(item, q) {
   /* 用 mask 沿著筆畫中線把輪廓一點一點露出來 */
   function demo() {
     demos++;
+    if (isB) return demoBopo();
     const mid = medPts(d.m[cur]).map(p => [p[0], dataY(p[1])]);   // 回到資料座標給 mask 用
     const dd = 'M' + mid.map(p => p.join(' ')).join('L');
     box.innerHTML = `<svg class="tr" viewBox="0 0 1024 1024">${grid()}
@@ -1370,13 +1460,27 @@ function renderTrace(item, q) {
     a.onfinish = () => setTimeout(paint, 420);
   }
 
+  /* 注音的示範：中線就是字形，直接沿著自己跑 dashoffset */
+  function demoBopo() {
+    const sts = BSTROKE[q.ch];
+    box.innerHTML = `<svg class="tr" viewBox="0 0 1024 1024">${grid()}
+      ${sts.map((st, i) => `<path d="M${st.map(p => p.join(' ')).join('L')}"
+        class="bs ${i < cur ? 'bs-done' : 'bs-ghost'}"/>`).join('')}
+      <path id="bp" d="M${sts[cur].map(p => p.join(' ')).join('L')}" class="bs bs-done"/></svg>`;
+    const bp = box.querySelector('#bp'), L = bp.getTotalLength();
+    bp.style.strokeDasharray = L; bp.style.strokeDashoffset = L;
+    bp.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }],
+      { duration: Math.max(450, L * 1.1), easing: 'ease-in-out', fill: 'forwards' })
+      .onfinish = () => setTimeout(paint, 400);
+  }
+
   function done() {
     const ms = performance.now() - t0;
     const pass = misses <= Math.floor(n / 4) && demos === 0;
     grade(item.k, pass, pass ? ms : 99999);     // 用了示範或錯太多就不算熟
     s[pass ? 'ok' : 'bad']++; s.marks[s.i] = pass ? 'ok' : 'no'; drawBar();
     if (!pass && s.extra < 3) { s.extra++; s.list.splice(Math.min(s.i + 3, s.list.length), 0, item); }
-    box.innerHTML = charSVG(q.ch, { done: n, cur: -1, ink: false });
+    box.innerHTML = (isB ? bopoSVG : charSVG)(q.ch, { done: n, cur: -1, ink: false });
     sfx.win();
     why.textContent = '';
     $('#trn').textContent = pass ? `${n} 畫，全對！` : `${n} 畫，寫完了`;
