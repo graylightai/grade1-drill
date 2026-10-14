@@ -1000,21 +1000,28 @@ const CHIP = (hex, size = 76) =>
   `<span class="chip-c" style="--c:${hex};--s:${size}px"></span>`;
 const COLORS = {
   紅: '#E03131', 黃: '#F3C218', 藍: '#2A6FD6', 橙: '#F08C1E', 綠: '#2F9E44',
-  紫: '#8043B8', 白: '#FFFFFF', 黑: '#2B2621', 粉紅: '#F2A0C0', 淺藍: '#8FC4F0',
-  淺綠: '#A3E0B4', 棕: '#9A6238', 深紅: '#8E1F1F', 灰: '#9AA0A6', 深藍: '#1B3F80'
+  紫: '#8043B8', 白: '#FFFFFF', 黑: '#2B2621', 棕: '#9A6238', 灰: '#9AA0A6',
+  // 加白變淺的那幾個，色票直接用「原色和白各半」算出來的值，
+  // 畫面才不會跟教的內容打架
+  粉紅: '#F09AA4', 淺藍: '#94B7EB', 淺綠: '#97CFA2', 淺橙: '#F7C68F', 淺紫: '#BFA1DB',
+  深紅: '#85292A', 深藍: '#2A4A7B', 深綠: '#2D6232'
 };
+/* 顏料的減法混色（美術課那一套）。
+   三原色互混的結果用課本教的鮮明顏色，不是 RGB 平均——
+   「黃＋藍＝綠」是要教的概念，RGB 平均會得到混濁的橄欖色，反而誤導。 */
 const MIX = [
   ['紅', '黃', '橙'], ['黃', '藍', '綠'], ['藍', '紅', '紫'],
   ['紅', '白', '粉紅'], ['藍', '白', '淺藍'], ['綠', '白', '淺綠'],
-  ['紅', '黑', '深紅'], ['藍', '黑', '深藍'], ['白', '黑', '灰'],
-  ['紅', '綠', '棕'], ['橙', '白', '粉紅'], ['黃', '紅', '橙']
+  ['橙', '白', '淺橙'], ['紫', '白', '淺紫'],
+  ['紅', '黑', '深紅'], ['藍', '黑', '深藍'], ['綠', '黑', '深綠'], ['白', '黑', '灰'],
+  ['紅', '綠', '棕']
 ];
 const MIXQ = MIX.map(([a, b, r]) => ({
   k: `col.mix.${a}${b}`, g: '兩色相加', subj: 'mix',
   make: () => {
     const others = shuffle(Object.keys(COLORS).filter(c => c !== r && c !== a && c !== b)).slice(0, 3);
     return { ask: '這兩個顏色混在一起，會變成什麼顏色？',
-      art: `<div class="mixrow">${CHIP(COLORS[a])}<span class="mixop">＋</span>${CHIP(COLORS[b])}
+      art: `<div class="mixrow">${shuffle([a, b]).map(c => CHIP(COLORS[c])).join('<span class="mixop">＋</span>')}
         <span class="mixop">＝</span><span class="mixq">？</span></div>`,
       choices: shuffle([r, ...others]).map(c => ({ swatch: COLORS[c], tag: c, ok: c === r })),
       hint: `<b>${a}</b> 加 <b>${b}</b> 會變成 <b>${r}</b>。` };
